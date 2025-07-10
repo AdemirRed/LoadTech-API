@@ -1,0 +1,40 @@
+# Dockerfile para desenvolvimento
+FROM node:18-alpine
+
+# Instalar dependências do sistema
+RUN apk add --no-cache \
+    postgresql-client \
+    curl \
+    git
+
+# Criar diretório de trabalho
+WORKDIR /app
+
+# Copiar package.json e package-lock.json
+COPY package*.json ./
+
+# Instalar dependências
+RUN npm ci --only=production && npm cache clean --force
+
+# Instalar nodemon globalmente para desenvolvimento
+RUN npm install -g nodemon
+
+# Criar usuário não-root
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Criar diretórios necessários
+RUN mkdir -p uploads logs && \
+    chown -R nextjs:nodejs /app
+
+# Copiar código da aplicação
+COPY --chown=nextjs:nodejs . .
+
+# Mudar para usuário não-root
+USER nextjs
+
+# Expor portas
+EXPOSE 3001 3002
+
+# Comando padrão
+CMD ["npm", "run", "dev"]

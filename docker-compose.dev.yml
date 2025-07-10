@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # Aplicação Node.js
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: loadtech-app-dev
+    environment:
+      NODE_ENV: development
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    ports:
+      - '3001:3001'
+      - '3002:3002'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - uploads_dev:/app/uploads
+    networks:
+      - loadtech-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    command: npm run dev
+
+  postgres:
+    image: postgres:15
+    container_name: loadtech-db-dev
+    environment:
+      POSTGRES_DB: loadtech_master_dev
+      POSTGRES_USER: loadtech_admin
+      POSTGRES_PASSWORD: LoadTech@Dev2025!
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data/pgdata
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - loadtech-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loadtech_admin -d loadtech_master_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: loadtech-redis-dev
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - loadtech-network
+    command: redis-server --appendonly yes
+
+  # Mailcatcher para desenvolvimento (captura e-mails)
+  mailcatcher:
+    image: schickling/mailcatcher
+    container_name: loadtech-mailcatcher
+    ports:
+      - '1025:1025'  # SMTP
+      - '1080:1080'  # Web Interface
+    networks:
+      - loadtech-network
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  uploads_dev:
+
+networks:
+  loadtech-network:
+    driver: bridge

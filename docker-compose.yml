@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: loadtech-master-db
+    environment:
+      POSTGRES_DB: loadtech_master
+      POSTGRES_USER: loadtech_admin
+      POSTGRES_PASSWORD: LoadTech@2025!
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5433:5432'
+    restart: always
+    volumes:
+      - postgres_master_data:/var/lib/postgresql/data/pgdata
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - loadtech-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loadtech_admin -d loadtech_master"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis para cache e sessões
+  redis:
+    image: redis:7-alpine
+    container_name: loadtech-redis
+    ports:
+      - '6379:6379'
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - loadtech-network
+    command: redis-server --appendonly yes --requirepass LoadTech@Redis2025
+
+  # PgAdmin para administração do banco
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: loadtech-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@loadtech.com
+      PGADMIN_DEFAULT_PASSWORD: LoadTech@Admin2025
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - '8080:80'
+    restart: always
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - loadtech-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_master_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  loadtech-network:
+    driver: bridge
