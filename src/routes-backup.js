@@ -25,16 +25,23 @@ import {
 
 const routes = new Router();
 
-// ===== WEBHOOKS (Sem autenticação) =====
+// ===== WEBHOOKS (Primeiro, sem nenhum middleware) =====
+
+// Webhook teste (para debug)
 routes.post('/webhooks/test', (req, res) => {
   console.log('🧪 Webhook teste recebido:', req.body);
-  return res.json({ status: 'ok', received: true, timestamp: new Date().toISOString() });
+  return res.json({ status: 'ok', received: true });
 });
 
+// Webhook do Asaas para notificações de pagamento
 routes.post('/webhooks/asaas', PaymentController.webhook);
+
+// Webhook do Mercado Pago para notificações de pagamento
 routes.post('/webhooks/mercadopago', PaymentController.mercadoPagoWebhook);
 
 // ===== ROTAS PÚBLICAS =====
+
+// Autenticação
 routes.post('/login', UserController.login);
 routes.post('/cadastro', UserController.store);
 routes.post('/verificar-email', UserController.verifyEmail);
@@ -43,14 +50,14 @@ routes.post('/esqueci-senha', AuthController.forgotPassword);
 routes.post('/redefinir-senha', AuthController.resetPassword);
 
 // Planos (público com cache)
-routes.get('/planos', cacheMiddleware(600), PlanoController.index);
+routes.get('/planos', cacheMiddleware(600), PlanoController.index); // Cache por 10 minutos
 routes.get('/planos/:id', cacheMiddleware(600), PlanoController.show);
-routes.get('/planos/comparar', cacheMiddleware(300), PlanoController.compare);
+routes.get('/planos/comparar', cacheMiddleware(300), PlanoController.compare); // Cache por 5 minutos
 
-// Loja pública
+// Loja pública (com cache)
 routes.get('/loja/:slug', cacheMiddleware(300), LojaController.showBySlug);
 
-// Health checks
+// Health check público (não requer autenticação)
 routes.get('/health', (req, res) => {
   return res.json({
     status: 'ok',
@@ -60,6 +67,7 @@ routes.get('/health', (req, res) => {
   });
 });
 
+// Health check específico do sistema de upload (público)
 routes.get('/uploads/health', (req, res) => {
   const fs = require('fs');
   const path = require('path');
@@ -79,26 +87,36 @@ routes.get('/uploads/health', (req, res) => {
     
     return res.json({
       status: 'ok',
-      message: 'Sistema de upload funcionando',
+      message: 'Sistema de upload está funcionando',
       timestamp: new Date().toISOString(),
-      folders: foldersStatus
+      uploadPath: '/uploads',
+      folders: foldersStatus,
+      allowedTypes: {
+        images: ['jpeg', 'jpg', 'png', 'webp'],
+        documents: ['pdf', 'doc', 'docx'],
+        videos: ['mp4', 'avi', 'mov']
+      },
+      limits: {
+        images: '5MB',
+        documents: '10MB',
+        videos: '50MB'
+      }
     });
   } catch (error) {
     return res.status(500).json({
       status: 'error',
       message: 'Erro no sistema de upload',
-      error: error.message
+      error: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });
 
-// Cache stats (público para desenvolvimento)
+// Cache/Redis management (público para desenvolvimento)
 routes.get('/cache/stats', CacheController.stats);
 
-// ===== MIDDLEWARE DE AUTENTICAÇÃO =====
+// ===== ROTAS PROTEGIDAS (Requer autenticação) =====
 routes.use(authMiddleware);
-
-// ===== ROTAS PROTEGIDAS =====
 
 // Usuário
 routes.get('/usuario', UserController.show);
@@ -121,43 +139,36 @@ routes.put('/loja/seo', LojaController.updateSEO);
 routes.put('/loja/pagamentos', LojaController.updatePaymentSettings);
 routes.put('/loja/status', LojaController.toggleStatus);
 
-// ===== PAGAMENTOS =====
+// ===== PAGAMENTOS E ASSINATURAS (Asaas) =====
 
-// Asaas - Criar cliente
+// Criar cliente no sistema de pagamento
 routes.post('/payment/customer', PaymentController.createCustomer);
 
-// Asaas - Assinaturas por forma de pagamento
-routes.post('/payment/subscription/credit-card', PaymentController.createCreditCardSubscription);
-routes.post('/payment/subscription/boleto', PaymentController.createBoletoSubscription);
-routes.post('/payment/subscription/pix', PaymentController.createPixSubscription);
-routes.post('/payment/subscription/debit', PaymentController.createDebitSubscription);
-routes.post('/payment/subscription/transfer', PaymentController.createTransferSubscription);
-
-// Asaas - Assinatura genérica (mantida para compatibilidade)
+// Assinaturas
 routes.post('/payment/subscription', PaymentController.createSubscription);
 routes.delete('/payment/subscription/:assinaturaId', PaymentController.cancelSubscription);
 routes.get('/payment/subscriptions', PaymentController.listUserSubscriptions);
 
-// Asaas - Cobranças únicas
-routes.post('/payment/single', PaymentController.createSinglePayment);
-
-// Asaas - Cartões salvos
-routes.get('/payment/credit-cards', PaymentController.listUserCreditCards);
-routes.delete('/payment/credit-cards/:tokenId', PaymentController.deleteCreditCard);
-
-// Asaas - PIX
-routes.get('/payment/pix/qr-code/:paymentId', PaymentController.generatePixQrCode);
-
-// Asaas - Status e utilitários
+// Status do sistema de pagamento
 routes.get('/payment/status', PaymentController.getPaymentStatus);
 
-// Mercado Pago (Produtos)
+// ===== MERCADO PAGO - VENDAS DE PRODUTOS =====
+
+// Configurar Mercado Pago para a loja
 routes.post('/payment/mercadopago/configure', PaymentController.configureMercadoPago);
+
+// Criar preferência de pagamento para produtos
 routes.post('/payment/mercadopago/preference', PaymentController.createProductPayment);
+
+// Buscar informações de pagamento
 routes.get('/payment/mercadopago/:paymentId', PaymentController.getMercadoPagoPayment);
+
+// Status das integrações de pagamento
 routes.get('/payment/integrations/status', PaymentController.getIntegrationStatus);
 
-// ===== UPLOADS =====
+// ===== ROTAS DE UPLOAD =====
+
+// Info do sistema de upload
 routes.get('/upload/info', UploadController.info);
 
 // Upload de imagens de produtos
@@ -237,21 +248,23 @@ routes.get('/upload/stats', UploadController.getUsageStats);
 // Middleware de tratamento de erros para upload
 routes.use(handleUploadError);
 
-// ===== ADMIN =====
+// ===== ROTAS DE ADMINISTRAÇÃO (Requer admin) =====
 routes.use(isAdminMiddleware);
 
-// Cache management
+// Admin - Cache management
 routes.post('/admin/cache/clear', CacheController.clear);
 routes.get('/admin/cache/:key', CacheController.get);
 routes.post('/admin/cache/:key', CacheController.set);
 routes.delete('/admin/cache/:key', CacheController.delete);
 
-// Gerenciamento de planos
+// Admin - gerenciamento de planos
 routes.post('/admin/planos', PlanoController.store);
 routes.put('/admin/planos/:id', PlanoController.update);
 routes.delete('/admin/planos/:id', PlanoController.delete);
 
-// Sincronização com Asaas
-routes.post('/admin/sync/asaas-orphans', UserController.syncAsaasOrphans);
+// Upload
+routes.post('/upload/imagem', setUploadType('image'), uploadSingle('file'), processImages, validateUpload, handleUploadError);
+routes.post('/upload/imagens', setUploadType('image'), uploadMultiple('files'), processImages, validateUpload, handleUploadError);
+routes.post('/upload/video', setUploadType('video'), uploadSingle('file'), processImages, validateUpload, handleUploadError);
 
 export default routes;

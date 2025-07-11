@@ -123,32 +123,11 @@ routes.put('/loja/status', LojaController.toggleStatus);
 
 // ===== PAGAMENTOS =====
 
-// Asaas - Criar cliente
+// Asaas (Assinaturas)
 routes.post('/payment/customer', PaymentController.createCustomer);
-
-// Asaas - Assinaturas por forma de pagamento
-routes.post('/payment/subscription/credit-card', PaymentController.createCreditCardSubscription);
-routes.post('/payment/subscription/boleto', PaymentController.createBoletoSubscription);
-routes.post('/payment/subscription/pix', PaymentController.createPixSubscription);
-routes.post('/payment/subscription/debit', PaymentController.createDebitSubscription);
-routes.post('/payment/subscription/transfer', PaymentController.createTransferSubscription);
-
-// Asaas - Assinatura genérica (mantida para compatibilidade)
 routes.post('/payment/subscription', PaymentController.createSubscription);
 routes.delete('/payment/subscription/:assinaturaId', PaymentController.cancelSubscription);
 routes.get('/payment/subscriptions', PaymentController.listUserSubscriptions);
-
-// Asaas - Cobranças únicas
-routes.post('/payment/single', PaymentController.createSinglePayment);
-
-// Asaas - Cartões salvos
-routes.get('/payment/credit-cards', PaymentController.listUserCreditCards);
-routes.delete('/payment/credit-cards/:tokenId', PaymentController.deleteCreditCard);
-
-// Asaas - PIX
-routes.get('/payment/pix/qr-code/:paymentId', PaymentController.generatePixQrCode);
-
-// Asaas - Status e utilitários
 routes.get('/payment/status', PaymentController.getPaymentStatus);
 
 // Mercado Pago (Produtos)
@@ -250,8 +229,5 @@ routes.delete('/admin/cache/:key', CacheController.delete);
 routes.post('/admin/planos', PlanoController.store);
 routes.put('/admin/planos/:id', PlanoController.update);
 routes.delete('/admin/planos/:id', PlanoController.delete);
-
-// Sincronização com Asaas
-routes.post('/admin/sync/asaas-orphans', UserController.syncAsaasOrphans);
 
 export default routes;

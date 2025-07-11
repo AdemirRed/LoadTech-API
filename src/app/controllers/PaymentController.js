@@ -1,0 +1,1188 @@
+/**
+ * Controller para gerenciar pagamentos e assinaturas via Asaas
+ */
+
+import AsaasClient from '../../services/AsaasClient.js';
+import MercadoPagoClient from '../../services/MercadoPagoClient.js';
+import User from '../models/User.js';
+import Plano from '../models/Plano.js';
+import Assinatura from '../models/Assinatura.js';
+
+class PaymentController {
+  /**
+   * Criar cliente no Asaas e associar ao usuário
+   */
+  async createCustomer(req, res) {
+    try {
+      const userId = req.userId;
+      const { phone, mobilePhone, cpfCnpj, address } = req.body;
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      // Verifica se já existe cliente Asaas para este usuário
+      if (user.asaas_customer_id) {
+        return res.status(400).json({ 
+          erro: 'Cliente já possui conta de pagamento associada',
+          customerId: user.asaas_customer_id
+        });
+      }
+
+      const customerData = {
+        name: user.nome,
+        email: user.email,
+        phone: phone,
+        mobilePhone: mobilePhone,
+        cpfCnpj: cpfCnpj,
+        externalReference: user.id.toString(),
+        ...address // postalCode, address, addressNumber, complement, province, city, state
+      };
+
+      const asaasCustomer = await AsaasClient.createCustomer(customerData);
+
+      // Salva o ID do cliente Asaas no usuário
+      user.asaas_customer_id = asaasCustomer.id;
+      user.cpf_cnpj = cpfCnpj;
+      await user.save();
+
+      return res.status(201).json({
+        mensagem: 'Cliente criado com sucesso no sistema de pagamento',
+        customer: {
+          id: asaasCustomer.id,
+          name: asaasCustomer.name,
+          email: asaasCustomer.email
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao criar cliente Asaas:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar cliente no sistema de pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar assinatura de plano
+   */
+  async createSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { planoId, billingType, creditCard, creditCardHolderInfo } = req.body;
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      if (!user.asaas_customer_id) {
+        return res.status(400).json({ 
+          erro: 'É necessário criar dados de pagamento antes de assinar um plano' 
+        });
+      }
+
+      const plano = await Plano.findByPk(planoId);
+      if (!plano) {
+        return res.status(404).json({ erro: 'Plano não encontrado' });
+      }
+
+      // Verifica se usuário já tem assinatura ativa
+      const assinaturaAtiva = await Assinatura.findOne({
+        where: { 
+          usuario_id: userId, 
+          status: 'ativa' 
+        }
+      });
+
+      if (assinaturaAtiva) {
+        return res.status(400).json({ 
+          erro: 'Usuário já possui uma assinatura ativa' 
+        });
+      }
+
+      // Validação do cartão se for pagamento por cartão
+      if (billingType === 'CREDIT_CARD') {
+        if (!creditCard || !creditCardHolderInfo) {
+          return res.status(400).json({ 
+            erro: 'Dados do cartão de crédito são obrigatórios para este tipo de pagamento' 
+          });
+        }
+        AsaasClient.validateCreditCard(creditCard);
+      }
+
+      // Calcula próxima data de vencimento (7 dias a partir de hoje)
+      const nextDueDate = new Date();
+      nextDueDate.setDate(nextDueDate.getDate() + 7);
+
+      const subscriptionData = {
+        customerId: user.asaas_customer_id,
+        billingType: billingType || 'CREDIT_CARD',
+        value: plano.preco,
+        nextDueDate: nextDueDate.toISOString().split('T')[0],
+        cycle: 'MONTHLY',
+        description: `Assinatura ${plano.nome} - LoadTech`,
+        externalReference: `${userId}_${planoId}_${Date.now()}`,
+        creditCard: creditCard,
+        creditCardHolderInfo: creditCardHolderInfo
+      };
+
+      const asaasSubscription = await AsaasClient.createSubscription(subscriptionData);
+
+      // Cria registro da assinatura no banco
+      const assinatura = await Assinatura.create({
+        usuario_id: userId,
+        plano_id: planoId,
+        asaas_subscription_id: asaasSubscription.id,
+        status: 'pendente',
+        data_inicio: new Date(),
+        data_fim: null,
+        valor: plano.preco,
+        forma_pagamento: billingType,
+        metadata: {
+          asaas_customer_id: user.asaas_customer_id,
+          external_reference: subscriptionData.externalReference
+        }
+      });
+
+      return res.status(201).json({
+        mensagem: 'Assinatura criada com sucesso',
+        assinatura: {
+          id: assinatura.id,
+          plano: plano.nome,
+          valor: plano.preco,
+          status: assinatura.status,
+          proxima_cobranca: nextDueDate,
+          asaas_subscription_id: asaasSubscription.id
+        },
+        payment_url: asaasSubscription.invoiceUrl
+      });
+    } catch (error) {
+      console.error('Erro ao criar assinatura:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar assinatura',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Cancelar assinatura
+   */
+  async cancelSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { assinaturaId } = req.params;
+
+      const assinatura = await Assinatura.findOne({
+        where: { 
+          id: assinaturaId,
+          usuario_id: userId 
+        },
+        include: [Plano]
+      });
+
+      if (!assinatura) {
+        return res.status(404).json({ erro: 'Assinatura não encontrada' });
+      }
+
+      if (assinatura.status === 'cancelada') {
+        return res.status(400).json({ erro: 'Assinatura já está cancelada' });
+      }
+
+      // Cancela no Asaas
+      await AsaasClient.cancelSubscription(assinatura.asaas_subscription_id);
+
+      // Atualiza no banco
+      assinatura.status = 'cancelada';
+      assinatura.data_cancelamento = new Date();
+      await assinatura.save();
+
+      return res.json({
+        mensagem: 'Assinatura cancelada com sucesso',
+        assinatura: {
+          id: assinatura.id,
+          plano: assinatura.Plano.nome,
+          status: assinatura.status,
+          data_cancelamento: assinatura.data_cancelamento
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao cancelar assinatura:', error);
+      return res.status(500).json({
+        erro: 'Erro ao cancelar assinatura',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Listar assinaturas do usuário
+   */
+  async listUserSubscriptions(req, res) {
+    try {
+      const userId = req.userId;
+
+      const assinaturas = await Assinatura.findAll({
+        where: { usuario_id: userId },
+        include: [Plano],
+        order: [['createdAt', 'DESC']]
+      });
+
+      const assinaturasFormatadas = assinaturas.map(assinatura => ({
+        id: assinatura.id,
+        plano: {
+          id: assinatura.Plano.id,
+          nome: assinatura.Plano.nome,
+          preco: assinatura.Plano.preco
+        },
+        status: assinatura.status,
+        valor: assinatura.valor,
+        forma_pagamento: assinatura.forma_pagamento,
+        data_inicio: assinatura.data_inicio,
+        data_fim: assinatura.data_fim,
+        data_cancelamento: assinatura.data_cancelamento,
+        criado_em: assinatura.createdAt
+      }));
+
+      return res.json({
+        assinaturas: assinaturasFormatadas,
+        total: assinaturas.length
+      });
+    } catch (error) {
+      console.error('Erro ao listar assinaturas:', error);
+      return res.status(500).json({
+        erro: 'Erro ao buscar assinaturas',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Webhook do Asaas para receber notificações de pagamento
+   */
+  async webhook(req, res) {
+    try {
+      const { event, payment, subscription } = req.body;
+      
+      console.log('📨 Webhook Asaas recebido:', { event, paymentId: payment?.id, subscriptionId: subscription?.id });
+
+      switch (event) {
+        case 'PAYMENT_CONFIRMED':
+        case 'PAYMENT_RECEIVED':
+          await PaymentController.handlePaymentConfirmed(payment, subscription);
+          break;
+          
+        case 'PAYMENT_OVERDUE':
+          await PaymentController.handlePaymentOverdue(payment, subscription);
+          break;
+          
+        case 'PAYMENT_DELETED':
+        case 'PAYMENT_REFUNDED':
+          await PaymentController.handlePaymentCancelled(payment, subscription);
+          break;
+          
+        default:
+          console.log(`ℹ️ Evento não tratado: ${event}`);
+      }
+
+      return res.status(200).json({ received: true });
+    } catch (error) {
+      console.error('Erro no webhook Asaas:', error);
+      return res.status(500).json({ erro: 'Erro interno no webhook' });
+    }
+  }
+
+  /**
+   * Processa pagamento confirmado
+   */
+  static async handlePaymentConfirmed(payment, subscription) {
+    if (subscription) {
+      const assinatura = await Assinatura.findOne({
+        where: { asaas_subscription_id: subscription.id }
+      });
+
+      if (assinatura) {
+        assinatura.status = 'ativa';
+        assinatura.ultimo_pagamento = new Date();
+        
+        // Calcula próxima data de vencimento
+        const dataFim = new Date();
+        dataFim.setMonth(dataFim.getMonth() + 1);
+        assinatura.data_fim = dataFim;
+        
+        await assinatura.save();
+        
+        console.log(`✅ Assinatura ${assinatura.id} ativada - Pagamento confirmado`);
+      }
+    }
+  }
+
+  /**
+   * Processa pagamento em atraso
+   */
+  static async handlePaymentOverdue(payment, subscription) {
+    if (subscription) {
+      const assinatura = await Assinatura.findOne({
+        where: { asaas_subscription_id: subscription.id }
+      });
+
+      if (assinatura && assinatura.status === 'ativa') {
+        assinatura.status = 'inadimplente';
+        await assinatura.save();
+        
+        console.log(`⚠️ Assinatura ${assinatura.id} marcada como inadimplente`);
+      }
+    }
+  }
+
+  /**
+   * Processa pagamento cancelado/estornado
+   */
+  static async handlePaymentCancelled(payment, subscription) {
+    if (subscription) {
+      const assinatura = await Assinatura.findOne({
+        where: { asaas_subscription_id: subscription.id }
+      });
+
+      if (assinatura) {
+        assinatura.status = 'cancelada';
+        assinatura.data_cancelamento = new Date();
+        await assinatura.save();
+        
+        console.log(`❌ Assinatura ${assinatura.id} cancelada - Pagamento estornado`);
+      }
+    }
+  }
+
+  /**
+   * Status da integração com Asaas
+   */
+  async getPaymentStatus(req, res) {
+    try {
+      const status = await AsaasClient.getApiStatus();
+      const balance = await AsaasClient.getBalance();
+      
+      return res.json({
+        asaas_status: status,
+        account_balance: balance,
+        integration_status: 'operational'
+      });
+    } catch (error) {
+      return res.status(500).json({
+        erro: 'Erro ao verificar status do sistema de pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  // ===== MERCADO PAGO - VENDAS DE PRODUTOS =====
+
+  /**
+   * Configurar credenciais do Mercado Pago para a loja
+   */
+  async configureMercadoPago(req, res) {
+    try {
+      const userId = req.userId;
+      const { access_token, public_key, webhook_url } = req.body;
+
+      // Busca a loja do usuário
+      const loja = await Loja.findOne({ where: { usuario_id: userId } });
+      if (!loja) {
+        return res.status(404).json({ erro: 'Loja não encontrada. Crie sua loja primeiro.' });
+      }
+
+      // Valida as credenciais
+      const validation = await MercadoPagoClient.validateCredentials({ access_token });
+      if (!validation.valid) {
+        return res.status(400).json({ 
+          erro: 'Credenciais do Mercado Pago inválidas',
+          detalhes: validation.message
+        });
+      }
+
+      // Atualiza configurações de pagamento da loja
+      const configuracoesPagamento = loja.configuracoes_pagamento || {};
+      configuracoesPagamento.mercadopago = {
+        access_token: access_token,
+        public_key: public_key,
+        webhook_url: webhook_url,
+        enabled: true,
+        configured_at: new Date().toISOString()
+      };
+
+      loja.configuracoes_pagamento = configuracoesPagamento;
+      await loja.save();
+
+      return res.json({
+        mensagem: 'Mercado Pago configurado com sucesso',
+        loja: {
+          id: loja.id,
+          nome: loja.nome,
+          mercadopago_enabled: true
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao configurar Mercado Pago:', error);
+      return res.status(500).json({
+        erro: 'Erro ao configurar Mercado Pago',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar preferência de pagamento para produtos
+   */
+  async createProductPayment(req, res) {
+    try {
+      const userId = req.userId;
+      const { 
+        items, 
+        payer, 
+        shipments, 
+        back_urls, 
+        external_reference,
+        installments,
+        excluded_payment_methods 
+      } = req.body;
+
+      // Busca a loja do usuário
+      const loja = await Loja.findOne({ where: { usuario_id: userId } });
+      if (!loja) {
+        return res.status(404).json({ erro: 'Loja não encontrada' });
+      }
+
+      // Verifica se Mercado Pago está configurado
+      const mpConfig = loja.configuracoes_pagamento?.mercadopago;
+      if (!mpConfig || !mpConfig.enabled || !mpConfig.access_token) {
+        return res.status(400).json({ 
+          erro: 'Mercado Pago não configurado para esta loja' 
+        });
+      }
+
+      // Validações básicas
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ erro: 'Items são obrigatórios' });
+      }
+
+      // Prepara dados da preferência
+      const preferenceData = {
+        items: items,
+        payer: payer,
+        shipments: shipments,
+        back_urls: back_urls,
+        external_reference: external_reference || `loja_${loja.id}_${Date.now()}`,
+        installments: installments,
+        excluded_payment_methods: excluded_payment_methods,
+        loja_id: loja.id,
+        notification_url: mpConfig.webhook_url
+      };
+
+      // Cria preferência no Mercado Pago
+      const preference = await MercadoPagoClient.createPreference(mpConfig, preferenceData);
+
+      return res.status(201).json({
+        mensagem: 'Preferência de pagamento criada com sucesso',
+        preference_id: preference.id,
+        init_point: preference.init_point,
+        sandbox_init_point: preference.sandbox_init_point,
+        external_reference: preference.external_reference,
+        marketplace_fee: MercadoPagoClient.calculateLoadTechFee(items),
+        expires_at: preference.expiration_date_to
+      });
+    } catch (error) {
+      console.error('Erro ao criar preferência de pagamento:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar preferência de pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Webhook do Mercado Pago para notificações de pagamento
+   */
+  async mercadoPagoWebhook(req, res) {
+    try {
+      const webhookData = MercadoPagoClient.formatWebhookData(req.body);
+      
+      console.log('📨 Webhook MercadoPago recebido:', webhookData);
+
+      // Responde rapidamente ao MP
+      res.status(200).json({ received: true });
+
+      // Processa webhook de forma assíncrona
+      if (webhookData.topic === 'payment') {
+        await this.processMercadoPagoPayment(webhookData.data_id);
+      }
+    } catch (error) {
+      console.error('Erro no webhook MercadoPago:', error);
+      return res.status(500).json({ erro: 'Erro interno no webhook' });
+    }
+  }
+
+  /**
+   * Processa pagamento do Mercado Pago
+   */
+  async processMercadoPagoPayment(paymentId) {
+    try {
+      // Busca todas as lojas com MP configurado para tentar encontrar o pagamento
+      const lojas = await Loja.findAll({
+        where: {
+          'configuracoes_pagamento.mercadopago.enabled': true
+        }
+      });
+
+      for (const loja of lojas) {
+        try {
+          const mpConfig = loja.configuracoes_pagamento.mercadopago;
+          const payment = await MercadoPagoClient.getPayment(mpConfig, paymentId);
+          
+          if (payment) {
+            await this.handleMercadoPagoPayment(payment, loja);
+            break;
+          }
+        } catch (error) {
+          // Continua tentando com outras lojas
+          continue;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao processar pagamento MP:', error);
+    }
+  }
+
+  /**
+   * Processa status do pagamento MP
+   */
+  async handleMercadoPagoPayment(paymentData, loja) {
+    const paymentInfo = MercadoPagoClient.extractPaymentInfo(paymentData);
+    
+    console.log(`💳 Pagamento MP processado: ${paymentInfo.id} - Status: ${paymentInfo.status}`);
+    
+    // Aqui você pode implementar a lógica específica do seu negócio:
+    // - Atualizar status do pedido
+    // - Enviar email de confirmação
+    // - Atualizar estoque
+    // - Etc.
+
+    // Por enquanto, apenas loga a informação
+    console.log(`🏪 Loja: ${loja.nome} - Valor: R$ ${paymentInfo.transaction_amount}`);
+  }
+
+  /**
+   * Buscar informações de um pagamento MP
+   */
+  async getMercadoPagoPayment(req, res) {
+    try {
+      const userId = req.userId;
+      const { paymentId } = req.params;
+
+      const loja = await Loja.findOne({ where: { usuario_id: userId } });
+      if (!loja) {
+        return res.status(404).json({ erro: 'Loja não encontrada' });
+      }
+
+      const mpConfig = loja.configuracoes_pagamento?.mercadopago;
+      if (!mpConfig || !mpConfig.enabled) {
+        return res.status(400).json({ erro: 'Mercado Pago não configurado' });
+      }
+
+      const payment = await MercadoPagoClient.getPayment(mpConfig, paymentId);
+      const paymentInfo = MercadoPagoClient.extractPaymentInfo(payment);
+
+      return res.json({
+        pagamento: paymentInfo,
+        is_approved: MercadoPagoClient.isPaymentApproved(payment)
+      });
+    } catch (error) {
+      console.error('Erro ao buscar pagamento MP:', error);
+      return res.status(500).json({
+        erro: 'Erro ao buscar pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Status das integrações de pagamento
+   */
+  async getIntegrationStatus(req, res) {
+    try {
+      const userId = req.userId;
+      
+      // Status Asaas (global)
+      const asaasStatus = await AsaasClient.getApiStatus();
+      
+      // Status Mercado Pago (por loja)
+      const loja = await Loja.findOne({ where: { usuario_id: userId } });
+      let mercadoPagoStatus = { configured: false };
+      
+      if (loja?.configuracoes_pagamento?.mercadopago?.enabled) {
+        const mpConfig = loja.configuracoes_pagamento.mercadopago;
+        const validation = await MercadoPagoClient.validateCredentials(mpConfig);
+        mercadoPagoStatus = {
+          configured: true,
+          valid: validation.valid,
+          message: validation.message,
+          configured_at: mpConfig.configured_at
+        };
+      }
+      
+      return res.json({
+        asaas: asaasStatus,
+        mercadopago: mercadoPagoStatus,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      return res.status(500).json({
+        erro: 'Erro ao verificar status das integrações',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar assinatura com cartão de crédito
+   */
+  async createCreditCardSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { 
+        planoId, 
+        creditCard, 
+        creditCardHolderInfo, 
+        remoteIp,
+        saveCard = false 
+      } = req.body;
+
+      const result = await validateUserAndPlan(userId, planoId);
+      if (result.error) return res.status(result.status).json({ erro: result.error });
+
+      const { user, plano } = result;
+
+      // Validação específica do cartão
+      AsaasClient.validateCreditCard(creditCard);
+
+      const nextDueDate = new Date();
+      nextDueDate.setDate(nextDueDate.getDate() + 7);
+
+      // Tokenizar cartão se solicitado
+      let creditCardToken = null;
+      if (saveCard) {
+        try {
+          const tokenResult = await AsaasClient.tokenizeCreditCard(user.asaas_customer_id, creditCard);
+          creditCardToken = tokenResult.creditCardToken;
+        } catch (error) {
+          console.log('Aviso: Não foi possível tokenizar o cartão:', error.message);
+        }
+      }
+
+      const subscriptionData = {
+        customerId: user.asaas_customer_id,
+        billingType: 'CREDIT_CARD',
+        value: plano.preco,
+        nextDueDate: nextDueDate.toISOString().split('T')[0],
+        cycle: 'MONTHLY',
+        description: `Assinatura ${plano.nome} - LoadTech`,
+        externalReference: `${userId}_${planoId}_${Date.now()}`,
+        creditCard: creditCard,
+        creditCardHolderInfo: creditCardHolderInfo,
+        remoteIp: remoteIp
+      };
+
+      const asaasSubscription = await AsaasClient.createCreditCardSubscription(
+        subscriptionData, 
+        creditCard, 
+        creditCardHolderInfo
+      );
+
+      const assinatura = await createSubscriptionRecord(
+        userId, planoId, asaasSubscription, 'CREDIT_CARD', plano.preco, {
+          creditCardToken,
+          lastFourDigits: creditCard.number.slice(-4)
+        }
+      );
+
+      return res.status(201).json({
+        mensagem: 'Assinatura com cartão de crédito criada com sucesso',
+        assinatura: formatSubscriptionResponse(assinatura, plano, nextDueDate),
+        payment_url: asaasSubscription.invoiceUrl,
+        credit_card_saved: !!creditCardToken
+      });
+    } catch (error) {
+      console.error('Erro ao criar assinatura com cartão:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar assinatura com cartão de crédito',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar assinatura com boleto bancário
+   */
+  async createBoletoSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { planoId, postalService = false, interest, fine } = req.body;
+
+      const result = await validateUserAndPlan(userId, planoId);
+      if (result.error) return res.status(result.status).json({ erro: result.error });
+
+      const { user, plano } = result;
+
+      const nextDueDate = new Date();
+      nextDueDate.setDate(nextDueDate.getDate() + 7);
+
+      const subscriptionData = {
+        customerId: user.asaas_customer_id,
+        value: plano.preco,
+        nextDueDate: nextDueDate.toISOString().split('T')[0],
+        cycle: 'MONTHLY',
+        description: `Assinatura ${plano.nome} - LoadTech`,
+        externalReference: `${userId}_${planoId}_${Date.now()}`
+      };
+
+      const asaasSubscription = await AsaasClient.createBoletoSubscription(
+        subscriptionData, 
+        { postalService, interest, fine }
+      );
+
+      const assinatura = await createSubscriptionRecord(
+        userId, planoId, asaasSubscription, 'BOLETO', plano.preco, {
+          postalService
+        }
+      );
+
+      return res.status(201).json({
+        mensagem: 'Assinatura com boleto bancário criada com sucesso',
+        assinatura: formatSubscriptionResponse(assinatura, plano, nextDueDate),
+        payment_url: asaasSubscription.invoiceUrl,
+        boleto_url: asaasSubscription.bankSlipUrl
+      });
+    } catch (error) {
+      console.error('Erro ao criar assinatura com boleto:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar assinatura com boleto bancário',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar assinatura com PIX
+   */
+  async createPixSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { planoId, pixAddressKey, pixQrCodeId } = req.body;
+
+      const result = await validateUserAndPlan(userId, planoId);
+      if (result.error) return res.status(result.status).json({ erro: result.error });
+
+      const { user, plano } = result;
+
+      const nextDueDate = new Date();
+      nextDueDate.setDate(nextDueDate.getDate() + 7);
+
+      const subscriptionData = {
+        customerId: user.asaas_customer_id,
+        value: plano.preco,
+        nextDueDate: nextDueDate.toISOString().split('T')[0],
+        cycle: 'MONTHLY',
+        description: `Assinatura ${plano.nome} - LoadTech`,
+        externalReference: `${userId}_${planoId}_${Date.now()}`
+      };
+
+      const asaasSubscription = await AsaasClient.createPixSubscription(
+        subscriptionData, 
+        { pixAddressKey, pixQrCodeId }
+      );
+
+      const assinatura = await createSubscriptionRecord(
+        userId, planoId, asaasSubscription, 'PIX', plano.preco, {
+          pixAddressKey
+        }
+      );
+
+      return res.status(201).json({
+        mensagem: 'Assinatura com PIX criada com sucesso',
+        assinatura: formatSubscriptionResponse(assinatura, plano, nextDueDate),
+        payment_url: asaasSubscription.invoiceUrl,
+        pix_copy_paste: asaasSubscription.pixCopyAndPaste,
+        pix_qr_code: asaasSubscription.pixQrCodeId
+      });
+    } catch (error) {
+      console.error('Erro ao criar assinatura com PIX:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar assinatura com PIX',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar assinatura com débito em conta
+   */
+  async createDebitSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { planoId, bankInfo } = req.body;
+
+      if (!bankInfo || !bankInfo.bank || !bankInfo.accountType || !bankInfo.agency || !bankInfo.account) {
+        return res.status(400).json({ 
+          erro: 'Dados bancários completos são obrigatórios para débito em conta' 
+        });
+      }
+
+      const result = await validateUserAndPlan(userId, planoId);
+      if (result.error) return res.status(result.status).json({ erro: result.error });
+
+      const { user, plano } = result;
+
+      const nextDueDate = new Date();
+      nextDueDate.setDate(nextDueDate.getDate() + 7);
+
+      const subscriptionData = {
+        customerId: user.asaas_customer_id,
+        value: plano.preco,
+        nextDueDate: nextDueDate.toISOString().split('T')[0],
+        cycle: 'MONTHLY',
+        description: `Assinatura ${plano.nome} - LoadTech`,
+        externalReference: `${userId}_${planoId}_${Date.now()}`
+      };
+
+      const asaasSubscription = await AsaasClient.createDebitSubscription(
+        subscriptionData, 
+        bankInfo
+      );
+
+      const assinatura = await createSubscriptionRecord(
+        userId, planoId, asaasSubscription, 'DEBIT', plano.preco, {
+          bank: bankInfo.bank,
+          agency: bankInfo.agency,
+          account: bankInfo.account.replace(/.(?=.{4})/g, '*') // Mascarar conta
+        }
+      );
+
+      return res.status(201).json({
+        mensagem: 'Assinatura com débito em conta criada com sucesso',
+        assinatura: formatSubscriptionResponse(assinatura, plano, nextDueDate),
+        payment_url: asaasSubscription.invoiceUrl
+      });
+    } catch (error) {
+      console.error('Erro ao criar assinatura com débito:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar assinatura com débito em conta',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar assinatura com transferência bancária
+   */
+  async createTransferSubscription(req, res) {
+    try {
+      const userId = req.userId;
+      const { planoId } = req.body;
+
+      const result = await validateUserAndPlan(userId, planoId);
+      if (result.error) return res.status(result.status).json({ erro: result.error });
+
+      const { user, plano } = result;
+
+      const nextDueDate = new Date();
+      nextDueDate.setDate(nextDueDate.getDate() + 7);
+
+      const subscriptionData = {
+        customerId: user.asaas_customer_id,
+        value: plano.preco,
+        nextDueDate: nextDueDate.toISOString().split('T')[0],
+        cycle: 'MONTHLY',
+        description: `Assinatura ${plano.nome} - LoadTech`,
+        externalReference: `${userId}_${planoId}_${Date.now()}`
+      };
+
+      const asaasSubscription = await AsaasClient.createTransferSubscription(subscriptionData);
+
+      // Buscar dados bancários para transferência
+      const bankTransferInfo = await AsaasClient.getBankTransferInfo();
+
+      const assinatura = await createSubscriptionRecord(
+        userId, planoId, asaasSubscription, 'TRANSFER', plano.preco, {
+          bankInfo: bankTransferInfo
+        }
+      );
+
+      return res.status(201).json({
+        mensagem: 'Assinatura com transferência bancária criada com sucesso',
+        assinatura: formatSubscriptionResponse(assinatura, plano, nextDueDate),
+        payment_url: asaasSubscription.invoiceUrl,
+        bank_transfer_info: {
+          bank: bankTransferInfo.bank,
+          agency: bankTransferInfo.agency,
+          account: bankTransferInfo.account,
+          accountDigit: bankTransferInfo.accountDigit,
+          companyDocument: bankTransferInfo.companyDocument,
+          companyName: bankTransferInfo.companyName
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao criar assinatura com transferência:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar assinatura com transferência bancária',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Validar usuário e plano (método auxiliar)
+   */
+  async validateUserAndPlan(userId, planoId) {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return { error: 'Usuário não encontrado', status: 404 };
+    }
+
+    if (!user.asaas_customer_id) {
+      return { 
+        error: 'É necessário criar dados de pagamento antes de assinar um plano', 
+        status: 400 
+      };
+    }
+
+    const plano = await Plano.findByPk(planoId);
+    if (!plano) {
+      return { error: 'Plano não encontrado', status: 404 };
+    }
+
+    // Verifica se usuário já tem assinatura ativa
+    const assinaturaAtiva = await Assinatura.findOne({
+      where: { 
+        usuario_id: userId, 
+        status: 'ativa' 
+      }
+    });
+
+    if (assinaturaAtiva) {
+      return { 
+        error: 'Usuário já possui uma assinatura ativa', 
+        status: 400 
+      };
+    }
+
+    return { user, plano };
+  }
+
+  /**
+   * Criar registro de assinatura no banco (método auxiliar)
+   */
+  async createSubscriptionRecord(userId, planoId, asaasSubscription, billingType, value, metadata = {}) {
+    return await Assinatura.create({
+      usuario_id: userId,
+      plano_id: planoId,
+      asaas_subscription_id: asaasSubscription.id,
+      status: 'pendente',
+      data_inicio: new Date(),
+      data_fim: null,
+      valor: value,
+      forma_pagamento: billingType,
+      metadata: {
+        asaas_customer_id: asaasSubscription.customer,
+        external_reference: asaasSubscription.externalReference,
+        ...metadata
+      }
+    });
+  }
+
+  /**
+   * Formatar resposta da assinatura (método auxiliar)
+   */
+  formatSubscriptionResponse(assinatura, plano, nextDueDate) {
+    return {
+      id: assinatura.id,
+      plano: plano.nome,
+      valor: plano.preco,
+      status: assinatura.status,
+      forma_pagamento: assinatura.forma_pagamento,
+      proxima_cobranca: nextDueDate,
+      asaas_subscription_id: assinatura.asaas_subscription_id
+    };
+  }
+
+  /**
+   * Listar cartões salvos do usuário
+   */
+  async listUserCreditCards(req, res) {
+    try {
+      const userId = req.userId;
+
+      const user = await User.findByPk(userId);
+      if (!user || !user.asaas_customer_id) {
+        return res.status(404).json({ erro: 'Usuário ou dados de pagamento não encontrados' });
+      }
+
+      const creditCards = await AsaasClient.listCustomerCreditCards(user.asaas_customer_id);
+
+      const cartoesFormatados = creditCards.data.map(card => ({
+        token: card.creditCardToken,
+        brand: card.creditCardBrand,
+        lastFourDigits: card.creditCardNumber,
+        holderName: card.holderName,
+        createdAt: card.dateCreated
+      }));
+
+      return res.json({
+        cartoes: cartoesFormatados,
+        total: creditCards.totalCount
+      });
+    } catch (error) {
+      console.error('Erro ao listar cartões:', error);
+      return res.status(500).json({
+        erro: 'Erro ao buscar cartões salvos',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Remover cartão salvo
+   */
+  async deleteCreditCard(req, res) {
+    try {
+      const { tokenId } = req.params;
+
+      await AsaasClient.deleteCreditCardToken(tokenId);
+
+      return res.json({
+        mensagem: 'Cartão removido com sucesso'
+      });
+    } catch (error) {
+      console.error('Erro ao remover cartão:', error);
+      return res.status(500).json({
+        erro: 'Erro ao remover cartão',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Gerar QR Code PIX para cobrança
+   */
+  async generatePixQrCode(req, res) {
+    try {
+      const { paymentId } = req.params;
+
+      const pixQrCode = await AsaasClient.generatePixQrCode(paymentId);
+
+      return res.json({
+        qr_code: pixQrCode.encodedImage,
+        payload: pixQrCode.payload,
+        expires_at: pixQrCode.expirationDate
+      });
+    } catch (error) {
+      console.error('Erro ao gerar QR Code PIX:', error);
+      return res.status(500).json({
+        erro: 'Erro ao gerar QR Code PIX',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Criar cobrança única (não recorrente)
+   */
+  async createSinglePayment(req, res) {
+    try {
+      const userId = req.userId;
+      const { 
+        valor, 
+        descricao, 
+        vencimento, 
+        billingType, 
+        creditCard, 
+        creditCardHolderInfo,
+        installmentCount 
+      } = req.body;
+
+      const user = await User.findByPk(userId);
+      if (!user || !user.asaas_customer_id) {
+        return res.status(404).json({ erro: 'Usuário ou dados de pagamento não encontrados' });
+      }
+
+      if (billingType === 'CREDIT_CARD' && installmentCount > 1) {
+        // Cobrança parcelada
+        const installmentValue = Math.round((valor / installmentCount) * 100) / 100;
+        
+        const paymentData = {
+          customerId: user.asaas_customer_id,
+          billingType: 'CREDIT_CARD',
+          value: valor,
+          dueDate: vencimento,
+          description: descricao,
+          externalReference: `single_${userId}_${Date.now()}`,
+          installmentCount: installmentCount,
+          installmentValue: installmentValue,
+          creditCard: creditCard,
+          creditCardHolderInfo: creditCardHolderInfo
+        };
+
+        const payment = await AsaasClient.createPaymentWithAllOptions(paymentData);
+
+        return res.status(201).json({
+          mensagem: 'Cobrança parcelada criada com sucesso',
+          payment: {
+            id: payment.id,
+            valor: payment.value,
+            parcelas: installmentCount,
+            valor_parcela: installmentValue,
+            status: payment.status,
+            vencimento: payment.dueDate
+          },
+          payment_url: payment.invoiceUrl
+        });
+      } else {
+        // Cobrança única
+        const paymentData = {
+          customerId: user.asaas_customer_id,
+          billingType: billingType,
+          value: valor,
+          dueDate: vencimento,
+          description: descricao,
+          externalReference: `single_${userId}_${Date.now()}`,
+          creditCard: creditCard,
+          creditCardHolderInfo: creditCardHolderInfo
+        };
+
+        const payment = await AsaasClient.createPaymentWithAllOptions(paymentData);
+
+        return res.status(201).json({
+          mensagem: 'Cobrança criada com sucesso',
+          payment: {
+            id: payment.id,
+            valor: payment.value,
+            status: payment.status,
+            vencimento: payment.dueDate,
+            forma_pagamento: payment.billingType
+          },
+          payment_url: payment.invoiceUrl,
+          boleto_url: payment.bankSlipUrl,
+          pix_copy_paste: payment.pixCopyAndPaste
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao criar cobrança única:', error);
+      return res.status(500).json({
+        erro: 'Erro ao criar cobrança',
+        detalhes: error.message
+      });
+    }
+  }
+}
+
+export default new PaymentController();

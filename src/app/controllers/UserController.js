@@ -6,6 +6,7 @@ import Plano from '../models/Plano.js';
 import Assinatura from '../models/Assinatura.js';
 import authConfig from '../../config/auth.js';
 import sendEmail from '../../utils/mailer.js';
+import AsaasClient from '../../services/AsaasClient.js';
 
 class UserController {
   // Registrar novo usuário
@@ -54,6 +55,27 @@ class UserController {
         status: 'pendente',
       });
 
+      // 🔥 SINCRONIZAR AUTOMATICAMENTE COM ASAAS
+      try {
+        const syncResult = await syncUserWithAsaas(user, {
+          phone: telefone,
+          mobilePhone: telefone
+        });
+        
+        if (syncResult.success) {
+          if (syncResult.linked) {
+            console.log(`🔗 Usuário ${email} vinculado ao cliente Asaas existente`);
+          } else if (syncResult.created) {
+            console.log(`✅ Cliente Asaas criado automaticamente para ${email}`);
+          }
+        } else {
+          console.warn(`⚠️ Falha na sincronização com Asaas para ${email}:`, syncResult.error);
+        }
+      } catch (syncError) {
+        console.error(`❌ Erro na sincronização automática com Asaas para ${email}:`, syncError);
+        // Não interrompe o cadastro, apenas loga o erro
+      }
+
       // Criar assinatura se plano foi selecionado
       if (plano) {
         const dataInicio = new Date();
@@ -87,20 +109,88 @@ class UserController {
       try {
         await sendEmail({
           to: email,
-          subject: 'Bem-vindo ao LoadTech - Verifique seu e-mail',
-          text: `Olá ${nome}, bem-vindo ao LoadTech! Seu código de verificação é: ${codigoVerificacao}`,
+          subject: 'LoadTech - Bem-vindo! Confirme seu cadastro',
+          text: `Prezado(a) ${nome},
+
+Bem-vindo(a) à plataforma LoadTech!
+
+Para completar seu cadastro e começar a usar nossa plataforma de e-commerce, confirme seu e-mail utilizando o código abaixo:
+
+Código de verificação: ${codigoVerificacao}
+
+Este código é válido por 30 minutos.
+
+Caso não tenha se cadastrado em nossa plataforma, ignore este e-mail.
+
+Atenciosamente,
+Equipe LoadTech - Suporte ao Cliente`,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-              <h2 style="color: #333;">Bem-vindo ao LoadTech!</h2>
-              <p>Olá <strong>${nome}</strong>,</p>
-              <p>Obrigado por se cadastrar no LoadTech! Para completar seu cadastro, utilize o código de verificação abaixo:</p>
-              <div style="font-size: 24px; font-weight: bold; color: #007bff; margin: 20px 0; text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-                ${codigoVerificacao}
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 0; background-color: #f8f9fa;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 300;">LoadTech</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de E-commerce</p>
               </div>
-              <p>Este código é válido por 30 minutos.</p>
-              <p>Se você não se cadastrou no LoadTech, ignore este e-mail.</p>
-              <hr style="margin: 30px 0;">
-              <p style="font-size: 12px; color: #aaa;">LoadTech - Sua plataforma de e-commerce © ${new Date().getFullYear()}</p>
+              
+              <div style="background: white; padding: 40px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 24px; color: white;">🎉</span>
+                  </div>
+                  <h2 style="color: #2c3e50; margin: 0; font-size: 24px; font-weight: 600;">Bem-vindo ao LoadTech!</h2>
+                </div>
+
+                <p style="color: #34495e; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                  Olá <strong>${nome}</strong>,
+                </p>
+                
+                <p style="color: #34495e; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                  Obrigado por se cadastrar na <strong>LoadTech</strong>, sua nova plataforma de e-commerce! 
+                  Para completar seu cadastro e começar a vender online, confirme seu e-mail utilizando o código abaixo:
+                </p>
+
+                <div style="background: linear-gradient(135deg, #28a745, #20c997); padding: 25px; border-radius: 10px; text-align: center; margin: 30px 0;">
+                  <p style="color: white; margin: 0 0 10px 0; font-size: 14px; opacity: 0.9;">Código de Verificação</p>
+                  <div style="font-size: 32px; font-weight: bold; color: white; letter-spacing: 4px; font-family: 'Courier New', monospace;">
+                    ${codigoVerificacao}
+                  </div>
+                  <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0 0; font-size: 12px;">Válido por 30 minutos</p>
+                </div>
+
+                <div style="background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 8px; padding: 15px; margin: 25px 0;">
+                  <p style="color: #1565c0; margin: 0; font-size: 14px;">
+                    <strong>🚀 Próximos passos:</strong> Após a confirmação, você poderá criar sua loja virtual, 
+                    adicionar produtos e começar a vender online imediatamente!
+                  </p>
+                </div>
+
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 25px 0;">
+                  <p style="color: #856404; margin: 0; font-size: 14px;">
+                    <strong>⚠️ Importante:</strong> Este código é de uso pessoal e deve ser inserido na tela de ativação. 
+                    Não compartilhe com terceiros.
+                  </p>
+                </div>
+
+                <div style="background: #e8f5e8; border-left: 4px solid #28a745; padding: 15px; margin: 25px 0;">
+                  <p style="color: #155724; margin: 0; font-size: 14px;">
+                    <strong>💡 Dica:</strong> Caso não tenha se cadastrado na LoadTech, 
+                    ignore este e-mail. Nenhuma ação adicional é necessária.
+                  </p>
+                </div>
+
+                <hr style="border: none; height: 1px; background: #e9ecef; margin: 30px 0;">
+                
+                <div style="text-align: center;">
+                  <p style="color: #6c757d; font-size: 13px; margin: 5px 0;">
+                    Este é um e-mail automático da plataforma LoadTech
+                  </p>
+                  <p style="color: #6c757d; font-size: 13px; margin: 5px 0;">
+                    Para suporte, entre em contato através do nosso site
+                  </p>
+                  <p style="color: #adb5bd; font-size: 12px; margin: 15px 0 0 0;">
+                    LoadTech © ${new Date().getFullYear()} - Sua plataforma de e-commerce
+                  </p>
+                </div>
+              </div>
             </div>
           `,
         });
@@ -227,12 +317,75 @@ class UserController {
         await sendEmail({
           to: email,
           subject: 'LoadTech - Novo código de verificação',
+          text: `Prezado(a) usuário(a),
+
+Você solicitou um novo código de verificação para sua conta na LoadTech.
+
+Código de verificação: ${codigoVerificacao}
+
+Este código é válido por 30 minutos e substitui o código anterior.
+
+Atenciosamente,
+Equipe LoadTech - Suporte ao Cliente`,
           html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
-              <h2>Novo código de verificação</h2>
-              <p>Seu novo código de verificação é:</p>
-              <div style="font-size: 24px; font-weight: bold; color: #007bff; text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-                ${codigoVerificacao}
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 0; background-color: #f8f9fa;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 300;">LoadTech</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Plataforma de E-commerce</p>
+              </div>
+              
+              <div style="background: white; padding: 40px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #ffc107, #fd7e14); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 24px; color: white;">🔄</span>
+                  </div>
+                  <h2 style="color: #2c3e50; margin: 0; font-size: 24px; font-weight: 600;">Novo Código de Verificação</h2>
+                </div>
+
+                <p style="color: #34495e; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                  Prezado(a) usuário(a),
+                </p>
+                
+                <p style="color: #34495e; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                  Você solicitou um novo código de verificação para sua conta na <strong>LoadTech</strong>. 
+                  Utilize o código abaixo para completar sua ativação:
+                </p>
+
+                <div style="background: linear-gradient(135deg, #ffc107, #fd7e14); padding: 25px; border-radius: 10px; text-align: center; margin: 30px 0;">
+                  <p style="color: white; margin: 0 0 10px 0; font-size: 14px; opacity: 0.9;">Novo Código de Verificação</p>
+                  <div style="font-size: 32px; font-weight: bold; color: white; letter-spacing: 4px; font-family: 'Courier New', monospace;">
+                    ${codigoVerificacao}
+                  </div>
+                  <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0 0; font-size: 12px;">Válido por 30 minutos</p>
+                </div>
+
+                <div style="background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 8px; padding: 15px; margin: 25px 0;">
+                  <p style="color: #1565c0; margin: 0; font-size: 14px;">
+                    <strong>🔄 Código atualizado:</strong> Este novo código substitui o anterior. 
+                    Códigos antigos não funcionarão mais.
+                  </p>
+                </div>
+
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin: 25px 0;">
+                  <p style="color: #856404; margin: 0; font-size: 14px;">
+                    <strong>⏰ Importante:</strong> Este código expira em 30 minutos. 
+                    Complete a verificação o quanto antes.
+                  </p>
+                </div>
+
+                <hr style="border: none; height: 1px; background: #e9ecef; margin: 30px 0;">
+                
+                <div style="text-align: center;">
+                  <p style="color: #6c757d; font-size: 13px; margin: 5px 0;">
+                    Este é um e-mail automático da plataforma LoadTech
+                  </p>
+                  <p style="color: #6c757d; font-size: 13px; margin: 5px 0;">
+                    Para suporte, entre em contato através do nosso site
+                  </p>
+                  <p style="color: #adb5bd; font-size: 12px; margin: 15px 0 0 0;">
+                    LoadTech © ${new Date().getFullYear()} - Sua plataforma de e-commerce
+                  </p>
+                </div>
               </div>
             </div>
           `,
@@ -299,6 +452,26 @@ class UserController {
       // Atualizar último login
       user.ultimo_login = new Date();
       await user.save();
+
+      // 🔥 VERIFICAR SINCRONIZAÇÃO COM ASAAS NO LOGIN
+      if (!user.asaas_customer_id) {
+        try {
+          const syncResult = await syncUserWithAsaas(user, {
+            phone: user.telefone,
+            mobilePhone: user.telefone
+          });
+          
+          if (syncResult.success) {
+            if (syncResult.linked) {
+              console.log(`🔗 Durante login: Usuário ${email} vinculado ao cliente Asaas existente`);
+            } else if (syncResult.created) {
+              console.log(`✅ Durante login: Cliente Asaas criado para ${email}`);
+            }
+          }
+        } catch (syncError) {
+          console.warn(`⚠️ Falha na sincronização durante login para ${email}:`, syncError);
+        }
+      }
 
       // Gerar token
       const token = jwt.sign(
@@ -415,6 +588,154 @@ class UserController {
       return res.status(500).json({ erro: 'Erro interno do servidor.' });
     }
   }
+
+  // Sincronizar usuários órfãos com Asaas (rota administrativa)
+  async syncAsaasOrphans(req, res) {
+    try {
+      // Verificar se é admin
+      if (req.user.papel !== 'admin') {
+        return res.status(403).json({ erro: 'Acesso negado. Apenas administradores.' });
+      }
+
+      console.log('🔄 Iniciando sincronização de usuários órfãos com Asaas...');
+
+      // 1. Vincular clientes órfãos do Asaas
+      const linkResult = await linkOrphanedAsaasCustomers();
+
+      // 2. Criar clientes Asaas para usuários sem vinculação
+      const usersWithoutAsaas = await User.findAll({
+        where: { asaas_customer_id: null },
+        limit: 50 // Limitar para não sobrecarregar
+      });
+
+      let syncedCount = 0;
+      let errorCount = 0;
+
+      for (const user of usersWithoutAsaas) {
+        try {
+          const syncResult = await syncUserWithAsaas(user, {
+            phone: user.telefone,
+            mobilePhone: user.telefone
+          });
+
+          if (syncResult.success) {
+            syncedCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (error) {
+          console.error(`Erro ao sincronizar usuário ${user.email}:`, error);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ Sincronização concluída: ${syncedCount} usuários sincronizados, ${errorCount} erros`);
+
+      return res.json({
+        mensagem: 'Sincronização com Asaas concluída',
+        usuarios_sincronizados: syncedCount,
+        erros: errorCount,
+        total_processados: usersWithoutAsaas.length
+      });
+
+    } catch (error) {
+      console.error('Erro na sincronização com Asaas:', error);
+      return res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+  }
+}
+
+/**
+ * Helper para sincronizar usuário com Asaas
+ */
+async function syncUserWithAsaas(user, additionalData = {}) {
+  try {
+    // Se já tem customer_id, não precisa criar novamente
+    if (user.asaas_customer_id) {
+      return { success: true, customerId: user.asaas_customer_id };
+    }
+
+    // Buscar se já existe um cliente no Asaas com o mesmo email
+    let existingCustomer = null;
+    try {
+      const customers = await AsaasClient.getCustomers({ email: user.email });
+      if (customers.data && customers.data.length > 0) {
+        existingCustomer = customers.data[0];
+      }
+    } catch (error) {
+      console.log('Erro ao buscar cliente existente no Asaas:', error.message);
+    }
+
+    if (existingCustomer) {
+      // Cliente já existe no Asaas, apenas vincular
+      user.asaas_customer_id = existingCustomer.id;
+      if (existingCustomer.cpfCnpj) {
+        user.cpf_cnpj = existingCustomer.cpfCnpj;
+      }
+      await user.save();
+      
+      console.log(`✅ Usuário ${user.email} vinculado ao cliente Asaas existente: ${existingCustomer.id}`);
+      return { success: true, customerId: existingCustomer.id, linked: true };
+    }
+
+    // Criar novo cliente no Asaas
+    const customerData = {
+      name: user.nome,
+      email: user.email,
+      phone: additionalData.phone || user.telefone || '',
+      mobilePhone: additionalData.mobilePhone || user.telefone || '',
+      cpfCnpj: additionalData.cpfCnpj || user.cpf_cnpj || '',
+      externalReference: user.id.toString(),
+      ...additionalData.address // postalCode, address, addressNumber, complement, province, city, state
+    };
+
+    const asaasCustomer = await AsaasClient.createCustomer(customerData);
+
+    // Salvar ID do cliente Asaas no usuário
+    user.asaas_customer_id = asaasCustomer.id;
+    if (asaasCustomer.cpfCnpj) {
+      user.cpf_cnpj = asaasCustomer.cpfCnpj;
+    }
+    await user.save();
+
+    console.log(`✅ Cliente Asaas criado para usuário ${user.email}: ${asaasCustomer.id}`);
+    return { success: true, customerId: asaasCustomer.id, created: true };
+
+  } catch (error) {
+    console.error(`❌ Erro ao sincronizar usuário ${user.email} com Asaas:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Helper para buscar e vincular usuários órfãos do Asaas
+ */
+async function linkOrphanedAsaasCustomers() {
+  try {
+    // Buscar todos os clientes do Asaas
+    const asaasCustomers = await AsaasClient.getCustomers({ limit: 100 });
+    
+    for (const customer of asaasCustomers.data || []) {
+      // Verificar se existe usuário na API com este email
+      const user = await User.findOne({ where: { email: customer.email } });
+      
+      if (user && !user.asaas_customer_id) {
+        // Usuário existe na API mas não tem vinculação com Asaas
+        user.asaas_customer_id = customer.id;
+        if (customer.cpfCnpj) {
+          user.cpf_cnpj = customer.cpfCnpj;
+        }
+        await user.save();
+        console.log(`🔗 Vinculado usuário ${user.email} ao cliente Asaas órfão: ${customer.id}`);
+      }
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Erro ao vincular clientes órfãos do Asaas:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 export default new UserController();
+export { syncUserWithAsaas, linkOrphanedAsaasCustomers };
