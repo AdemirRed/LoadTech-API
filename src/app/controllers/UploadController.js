@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import User from '../models/User.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,13 +45,8 @@ class UploadController {
   // Upload de logo da loja
   async uploadLojaLogo(req, res) {
     try {
+      const userId = req.user.id;
       const lojaId = req.user.loja?.id;
-
-      if (!lojaId) {
-        return res.status(400).json({
-          erro: 'Usuário não possui loja vinculada',
-        });
-      }
 
       if (!req.uploadedFile) {
         return res.status(400).json({
@@ -58,12 +54,21 @@ class UploadController {
         });
       }
 
-      // Aqui você pode atualizar o logo da loja no banco
-      // Exemplo: await Loja.update({ logo: req.uploadedFile.original.url }, { where: { id: lojaId } });
+      // Atualizar URL do logo no banco de dados (no usuário)
+      const logoUrl = req.uploadedFile.versions?.medium?.url || req.uploadedFile.original.url;
+      
+      await User.update(
+        { logo_url: logoUrl },
+        { where: { id: userId } }
+      );
+
+      console.log(`✅ Logo da loja atualizado para usuário ${userId}: ${logoUrl}`);
 
       res.json({
         mensagem: 'Logo da loja enviado com sucesso',
+        user_id: userId,
         loja_id: lojaId,
+        logo_url: logoUrl,
         arquivo: req.uploadedFile,
       });
     } catch (error) {
@@ -118,12 +123,20 @@ class UploadController {
         });
       }
 
-      // Aqui você pode atualizar o avatar do usuário no banco
-      // Exemplo: await User.update({ avatar: req.uploadedFile.original.url }, { where: { id: userId } });
+      // Atualizar URL do avatar no banco de dados
+      const avatarUrl = req.uploadedFile.versions?.medium?.url || req.uploadedFile.original.url;
+      
+      await User.update(
+        { avatar_url: avatarUrl },
+        { where: { id: userId } }
+      );
+
+      console.log(`✅ Avatar atualizado para usuário ${userId}: ${avatarUrl}`);
 
       res.json({
         mensagem: 'Avatar do usuário enviado com sucesso',
         user_id: userId,
+        avatar_url: avatarUrl,
         arquivo: req.uploadedFile,
       });
     } catch (error) {

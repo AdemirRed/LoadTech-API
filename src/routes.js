@@ -44,8 +44,8 @@ routes.post('/redefinir-senha', AuthController.resetPassword);
 
 // Planos (público com cache)
 routes.get('/planos', cacheMiddleware(600), PlanoController.index);
-routes.get('/planos/:id', cacheMiddleware(600), PlanoController.show);
 routes.get('/planos/comparar', cacheMiddleware(300), PlanoController.compare);
+routes.get('/planos/:id', cacheMiddleware(600), PlanoController.show);
 
 // Loja pública
 routes.get('/loja/:slug', cacheMiddleware(300), LojaController.showBySlug);

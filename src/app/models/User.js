@@ -78,6 +78,122 @@ class User extends Model {
           type: DataTypes.DATE,
           allowNull: true,
         },
+        
+        // ===== CAMPOS DO ASAAS CUSTOMER =====
+        asaas_customer_id: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          unique: true,
+          comment: 'ID do cliente no Asaas',
+        },
+        cpf_cnpj: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'CPF ou CNPJ do cliente (obrigatório no Asaas)',
+          validate: {
+            is: /^[0-9]{11}$|^[0-9]{14}$/, // CPF (11) ou CNPJ (14) dígitos
+          },
+        },
+        phone: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Telefone fixo do cliente',
+        },
+        mobile_phone: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Telefone celular do cliente',
+        },
+        address: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Logradouro do endereço',
+        },
+        address_number: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Número do endereço',
+        },
+        complement: {
+          type: DataTypes.STRING(255),
+          allowNull: true,
+          comment: 'Complemento do endereço (máx. 255 caracteres)',
+        },
+        province: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Bairro',
+        },
+        postal_code: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'CEP do endereço',
+          validate: {
+            is: /^[0-9]{5}-?[0-9]{3}$/, // Formato CEP brasileiro
+          },
+        },
+        external_reference: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Identificador do cliente no nosso sistema',
+        },
+        notification_disabled: {
+          type: DataTypes.BOOLEAN,
+          allowNull: true,
+          defaultValue: false,
+          comment: 'true para desabilitar notificações de cobrança',
+        },
+        additional_emails: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: 'Emails adicionais para notificações separados por vírgula',
+        },
+        municipal_inscription: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Inscrição municipal do cliente',
+        },
+        state_inscription: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Inscrição estadual do cliente',
+        },
+        observations: {
+          type: DataTypes.TEXT,
+          allowNull: true,
+          comment: 'Observações adicionais sobre o cliente',
+        },
+        group_name: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Nome do grupo ao qual o cliente pertence',
+        },
+        company: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'Nome da empresa do cliente',
+        },
+        foreign_customer: {
+          type: DataTypes.BOOLEAN,
+          allowNull: true,
+          defaultValue: false,
+          comment: 'true caso seja pagador estrangeiro',
+        },
+        // ===== FIM CAMPOS ASAAS =====
+        
+        // ===== CAMPOS DE UPLOAD =====
+        avatar_url: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'URL do avatar/foto de perfil do usuário',
+        },
+        logo_url: {
+          type: DataTypes.STRING,
+          allowNull: true,
+          comment: 'URL da logo da loja do usuário',
+        },
+        // ===== FIM CAMPOS UPLOAD =====
+        
         senha: {
           type: DataTypes.VIRTUAL,
           set(valor) {
@@ -132,6 +248,11 @@ class User extends Model {
 
   // Método para verificar se pode criar loja
   async podecriarLoja() {
+    // Em desenvolvimento, permitir criação de loja mesmo sem assinatura
+    if (process.env.NODE_ENV !== 'production') {
+      return true;
+    }
+    
     const assinatura = await this.getAssinaturaAtiva();
     return assinatura && ['ativa', 'periodo_gratuito'].includes(assinatura.status);
   }

@@ -15,7 +15,32 @@ class PaymentController {
   async createCustomer(req, res) {
     try {
       const userId = req.userId;
-      const { phone, mobilePhone, cpfCnpj, address } = req.body;
+      const {
+        // Campos obrigatórios do Asaas
+        cpfCnpj, // required
+        
+        // Campos opcionais de contato
+        phone,
+        mobilePhone,
+        
+        // Campos de endereço
+        address,
+        addressNumber,
+        complement,
+        province,
+        postalCode,
+        
+        // Campos adicionais do Asaas
+        externalReference,
+        notificationDisabled,
+        additionalEmails,
+        municipalInscription,
+        stateInscription,
+        observations,
+        groupName,
+        company,
+        foreignCustomer
+      } = req.body;
 
       const user = await User.findByPk(userId);
       if (!user) {
@@ -30,22 +55,68 @@ class PaymentController {
         });
       }
 
+      // Validar CPF/CNPJ obrigatório
+      if (!cpfCnpj) {
+        return res.status(400).json({ erro: 'CPF ou CNPJ é obrigatório' });
+      }
+
+      // Preparar dados do cliente para o Asaas
       const customerData = {
-        name: user.nome,
+        name: user.nome, // required
+        cpfCnpj: cpfCnpj, // required
         email: user.email,
         phone: phone,
         mobilePhone: mobilePhone,
-        cpfCnpj: cpfCnpj,
-        externalReference: user.id.toString(),
-        ...address // postalCode, address, addressNumber, complement, province, city, state
+        address: address,
+        addressNumber: addressNumber,
+        complement: complement,
+        province: province,
+        postalCode: postalCode,
+        externalReference: externalReference || user.id.toString(),
+        notificationDisabled: notificationDisabled || false,
+        additionalEmails: additionalEmails,
+        municipalInscription: municipalInscription,
+        stateInscription: stateInscription,
+        observations: observations,
+        groupName: groupName,
+        company: company,
+        foreignCustomer: foreignCustomer || false
       };
+
+      // Remover campos undefined para não enviar ao Asaas
+      Object.keys(customerData).forEach(key => {
+        if (customerData[key] === undefined) {
+          delete customerData[key];
+        }
+      });
+
+      console.log('📤 Criando cliente no Asaas:', customerData);
 
       const asaasCustomer = await AsaasClient.createCustomer(customerData);
 
-      // Salva o ID do cliente Asaas no usuário
-      user.asaas_customer_id = asaasCustomer.id;
-      user.cpf_cnpj = cpfCnpj;
-      await user.save();
+      // Salvar todos os dados do cliente no usuário
+      await user.update({
+        asaas_customer_id: asaasCustomer.id,
+        cpf_cnpj: cpfCnpj,
+        phone: phone,
+        mobile_phone: mobilePhone,
+        address: address,
+        address_number: addressNumber,
+        complement: complement,
+        province: province,
+        postal_code: postalCode,
+        external_reference: externalReference || user.id.toString(),
+        notification_disabled: notificationDisabled || false,
+        additional_emails: additionalEmails,
+        municipal_inscription: municipalInscription,
+        state_inscription: stateInscription,
+        observations: observations,
+        group_name: groupName,
+        company: company,
+        foreign_customer: foreignCustomer || false
+      });
+
+      console.log('✅ Cliente criado no Asaas e dados salvos no banco:', asaasCustomer.id);
 
       return res.status(201).json({
         mensagem: 'Cliente criado com sucesso no sistema de pagamento',
@@ -225,21 +296,24 @@ class PaymentController {
       const userId = req.userId;
 
       const assinaturas = await Assinatura.findAll({
-        where: { usuario_id: userId },
-        include: [Plano],
+        where: { user_id: userId },
+        include: [{ 
+          model: Plano, 
+          as: 'plano' 
+        }],
         order: [['createdAt', 'DESC']]
       });
 
       const assinaturasFormatadas = assinaturas.map(assinatura => ({
         id: assinatura.id,
         plano: {
-          id: assinatura.Plano.id,
-          nome: assinatura.Plano.nome,
-          preco: assinatura.Plano.preco
+          id: assinatura.plano.id,
+          nome: assinatura.plano.nome,
+          preco: assinatura.plano.preco_mensal || assinatura.plano.preco
         },
         status: assinatura.status,
-        valor: assinatura.valor,
-        forma_pagamento: assinatura.forma_pagamento,
+        valor: assinatura.valor_pago,
+        forma_pagamento: assinatura.metodo_pagamento,
         data_inicio: assinatura.data_inicio,
         data_fim: assinatura.data_fim,
         data_cancelamento: assinatura.data_cancelamento,

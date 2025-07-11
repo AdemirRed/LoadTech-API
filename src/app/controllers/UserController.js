@@ -678,16 +678,38 @@ async function syncUserWithAsaas(user, additionalData = {}) {
       return { success: true, customerId: existingCustomer.id, linked: true };
     }
 
+    // Validar e formatar telefone para o Asaas
+    const formatPhone = (phone) => {
+      if (!phone) return '';
+      // Remove todos os caracteres não numéricos
+      const cleaned = phone.replace(/\D/g, '');
+      // Verifica se tem o formato brasileiro válido
+      if (cleaned.length === 10 || cleaned.length === 11) {
+        return cleaned;
+      }
+      return '';
+    };
+
+    const formattedPhone = formatPhone(additionalData.phone || user.telefone);
+    
     // Criar novo cliente no Asaas
     const customerData = {
       name: user.nome,
       email: user.email,
-      phone: additionalData.phone || user.telefone || '',
-      mobilePhone: additionalData.mobilePhone || user.telefone || '',
-      cpfCnpj: additionalData.cpfCnpj || user.cpf_cnpj || '',
       externalReference: user.id.toString(),
       ...additionalData.address // postalCode, address, addressNumber, complement, province, city, state
     };
+
+    // Adicionar telefone apenas se válido
+    if (formattedPhone) {
+      customerData.phone = formattedPhone;
+      customerData.mobilePhone = formattedPhone;
+    }
+
+    // Adicionar CPF apenas se fornecido
+    if (additionalData.cpfCnpj || user.cpf_cnpj) {
+      customerData.cpfCnpj = additionalData.cpfCnpj || user.cpf_cnpj;
+    }
 
     const asaasCustomer = await AsaasClient.createCustomer(customerData);
 

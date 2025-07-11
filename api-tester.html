@@ -381,6 +381,7 @@
                     <div class="tabs">
                         <button class="tab active" onclick="showTab('verificar-email-tab', this)">Verificar Email</button>
                         <button class="tab" onclick="showTab('reenviar-codigo-tab', this)">Reenviar Código</button>
+                        <button class="tab" onclick="showTab('ativar-conta-tab', this)">Ativar Conta</button>
                     </div>
 
                     <!-- Verificar Email -->
@@ -410,6 +411,28 @@
                         <button class="btn btn-warning" onclick="reenviarCodigo()">📧 Reenviar Código</button>
                         
                         <div id="reenviar-codigo-result"></div>
+                    </div>
+
+                    <!-- Ativar Conta -->
+                    <div id="ativar-conta-tab" class="tab-content">
+                        <div class="quick-fill">
+                            <strong>🚀 Teste Rápido:</strong><br>
+                            <button onclick="fillAtivacaoTeste()">Preencher dados de teste</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ativar-email">Email da Conta:</label>
+                            <input type="email" id="ativar-email" placeholder="email@teste.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ativar-codigo">Código de Ativação:</label>
+                            <input type="text" id="ativar-codigo" placeholder="123456" maxlength="6">
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="ativarConta()">🔓 Ativar Conta</button>
+                        
+                        <div id="ativar-conta-result"></div>
                     </div>
                 </div>
             </div>
@@ -488,12 +511,230 @@
                     💎 Planos e Assinaturas
                 </div>
                 <div class="section-content">
-                    <button class="btn btn-info" onclick="getPlanos()">💎 Listar Planos</button>
-                    <button class="btn btn-info" onclick="compararPlanos()">⚖️ Comparar Planos</button>
-                    <button class="btn btn-success" onclick="getAssinaturas()">📋 Minhas Assinaturas</button>
-                    <button class="btn btn-warning" onclick="getAssinaturaAtual()">🔥 Assinatura Atual</button>
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('planos-publicos-tab', this)">Planos Públicos</button>
+                        <button class="tab" onclick="showTab('minhas-assinaturas-tab', this)">Minhas Assinaturas</button>
+                        <button class="tab" onclick="showTab('nova-assinatura-tab', this)">Nova Assinatura</button>
+                    </div>
 
-                    <div id="planos-result"></div>
+                    <!-- Planos Públicos -->
+                    <div id="planos-publicos-tab" class="tab-content active">
+                        <button class="btn btn-info" onclick="getPlanos()">💎 Listar Planos</button>
+                        <button class="btn btn-info" onclick="compararPlanos()">⚖️ Comparar Planos</button>
+                        
+                        <div id="planos-publicos-result"></div>
+                    </div>
+
+                    <!-- Minhas Assinaturas -->
+                    <div id="minhas-assinaturas-tab" class="tab-content">
+                        <button class="btn btn-success" onclick="getAssinaturas()">📋 Listar Assinaturas</button>
+                        <button class="btn btn-warning" onclick="getAssinaturaAtual()">🔥 Assinatura Atual</button>
+                        <button class="btn btn-info" onclick="getStatusPagamento()">💳 Status Pagamento</button>
+                        
+                        <div style="margin-top: 15px;">
+                            <h4>🎯 Gestão de Assinatura:</h4>
+                            <div class="form-group">
+                                <label for="assinatura-id">ID da Assinatura:</label>
+                                <input type="text" id="assinatura-id" placeholder="ID da assinatura para cancelar">
+                            </div>
+                            <button class="btn btn-danger" onclick="cancelarAssinatura()">❌ Cancelar Assinatura</button>
+                        </div>
+                        
+                        <div id="minhas-assinaturas-result"></div>
+                    </div>
+
+                    <!-- Nova Assinatura -->
+                    <div id="nova-assinatura-tab" class="tab-content">
+                        <div class="quick-fill">
+                            <strong>🚀 Preenchimento Rápido:</strong><br>
+                            <button onclick="fillDadosPagamento()">Dados de Pagamento</button>
+                            <button onclick="loadPlanosDropdown()">Carregar Planos</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="plano-assinatura">Plano:</label>
+                            <select id="plano-assinatura">
+                                <option value="">Carregue os planos primeiro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tipo-pagamento">Forma de Pagamento:</label>
+                            <select id="tipo-pagamento" onchange="showPaymentFields()">
+                                <option value="CREDIT_CARD">💳 Cartão de Crédito</option>
+                                <option value="DEBIT_CARD">💳 Cartão de Débito</option>
+                                <option value="BOLETO">🧾 Boleto Bancário</option>
+                                <option value="PIX">🔄 PIX</option>
+                                <option value="BANK_TRANSFER">🏦 Transferência Bancária</option>
+                            </select>
+                        </div>
+
+                        <!-- Dados do Cliente -->
+                        <div id="customer-data-section" style="display: none;">
+                            <h4>👤 Dados do Cliente (obrigatório uma vez):</h4>
+                            
+                            <!-- Campos obrigatórios -->
+                            <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+                                <strong>📝 Campos Obrigatórios:</strong>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customer-cpf">CPF/CNPJ: *</label>
+                                <input type="text" id="customer-cpf" placeholder="11144477735" required>
+                                <small>Obrigatório para o Asaas</small>
+                            </div>
+
+                            <!-- Campos de contato -->
+                            <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 15px 0;">
+                                <strong>📞 Contato:</strong>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customer-phone">Telefone Fixo:</label>
+                                <input type="text" id="customer-phone" placeholder="1133334444">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-mobile">Telefone Celular:</label>
+                                <input type="text" id="customer-mobile" placeholder="11987654321">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-additional-emails">Emails Adicionais:</label>
+                                <input type="text" id="customer-additional-emails" placeholder="email1@teste.com,email2@teste.com">
+                                <small>Separados por vírgula</small>
+                            </div>
+
+                            <!-- Campos de endereço -->
+                            <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 15px 0;">
+                                <strong>🏠 Endereço:</strong>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customer-cep">CEP:</label>
+                                <input type="text" id="customer-cep" placeholder="01234567">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-endereco">Logradouro:</label>
+                                <input type="text" id="customer-endereco" placeholder="Rua das Flores">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-numero">Número:</label>
+                                <input type="text" id="customer-numero" placeholder="123">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-complemento">Complemento:</label>
+                                <input type="text" id="customer-complemento" placeholder="Apto 45">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-bairro">Bairro:</label>
+                                <input type="text" id="customer-bairro" placeholder="Centro">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-cidade">Cidade:</label>
+                                <input type="text" id="customer-cidade" placeholder="São Paulo">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-estado">Estado:</label>
+                                <input type="text" id="customer-estado" placeholder="SP" maxlength="2">
+                            </div>
+
+                            <!-- Campos empresariais -->
+                            <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 15px 0;">
+                                <strong>🏢 Dados Empresariais (opcionais):</strong>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customer-company">Empresa:</label>
+                                <input type="text" id="customer-company" placeholder="Minha Empresa LTDA">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-municipal">Inscrição Municipal:</label>
+                                <input type="text" id="customer-municipal" placeholder="123456789">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-estadual">Inscrição Estadual:</label>
+                                <input type="text" id="customer-estadual" placeholder="123456789">
+                            </div>
+
+                            <!-- Campos adicionais -->
+                            <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin: 15px 0;">
+                                <strong>📋 Campos Adicionais:</strong>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="customer-group">Nome do Grupo:</label>
+                                <input type="text" id="customer-group" placeholder="Grupo VIP">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customer-observations">Observações:</label>
+                                <textarea id="customer-observations" placeholder="Observações sobre o cliente" rows="3"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="customer-foreign"> Cliente Estrangeiro
+                                </label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="customer-notifications-disabled"> Desabilitar Notificações
+                                </label>
+                            </div>
+
+                            <button class="btn btn-warning" onclick="fillDadosCliente()">🚀 Preencher Teste</button>
+                            <button class="btn btn-success" onclick="criarClientePagamento()">👤 Criar Dados de Pagamento</button>
+                        </div>
+
+                        <!-- Dados do Cartão -->
+                        <div id="card-data-section" style="display: none;">
+                            <h4>💳 Dados do Cartão:</h4>
+                            
+                            <div class="form-group">
+                                <label for="card-number">Número do Cartão:</label>
+                                <input type="text" id="card-number" placeholder="1234567890123456" maxlength="16">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-holder">Nome no Cartão:</label>
+                                <input type="text" id="card-holder" placeholder="JOÃO DA SILVA">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-expiry">Validade (MM/AA):</label>
+                                <input type="text" id="card-expiry" placeholder="12/28" maxlength="5">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-cvv">CVV:</label>
+                                <input type="text" id="card-cvv" placeholder="123" maxlength="4">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-cpf">CPF do Portador:</label>
+                                <input type="text" id="card-cpf" placeholder="11144477735">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-phone">Telefone do Portador:</label>
+                                <input type="text" id="card-phone" placeholder="11987654321">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-success" onclick="criarAssinatura()" style="margin-top: 15px;">🔥 Criar Assinatura</button>
+                        
+                        <div id="nova-assinatura-result"></div>
+                    </div>
                 </div>
             </div>
 
@@ -744,6 +985,29 @@
             document.getElementById('cadastro-telefone').value = '(11) 99999-9999';
         }
 
+        function fillAtivacaoTeste() {
+            document.getElementById('ativar-email').value = 'teste@loadtech.com';
+            document.getElementById('ativar-codigo').value = '123456';
+        }
+
+        function fillDadosPagamento() {
+            document.getElementById('customer-phone').value = '11987654321';
+            document.getElementById('customer-cpf').value = '11144477735';
+            document.getElementById('customer-cep').value = '01234567';
+            document.getElementById('customer-endereco').value = 'Rua Teste';
+            document.getElementById('customer-numero').value = '123';
+            document.getElementById('customer-cidade').value = 'São Paulo';
+            document.getElementById('customer-estado').value = 'SP';
+            
+            // Dados do cartão de teste
+            document.getElementById('card-number').value = '4111111111111111';
+            document.getElementById('card-holder').value = 'TESTE CARTAO';
+            document.getElementById('card-expiry').value = '12/28';
+            document.getElementById('card-cvv').value = '123';
+            document.getElementById('card-cpf').value = '11144477735';
+            document.getElementById('card-phone').value = '11987654321';
+        }
+
         // ===== FUNÇÕES DE AUTENTICAÇÃO =====
 
         async function login() {
@@ -927,6 +1191,36 @@
                 }
             } catch (error) {
                 showResult('reenviar-codigo-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function ativarConta() {
+            const email = document.getElementById('ativar-email').value;
+            const codigo = document.getElementById('ativar-codigo').value;
+
+            if (!email || !codigo) {
+                showResult('ativar-conta-result', 'Email e código são obrigatórios', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/verificar-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, codigo })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('ativar-conta-result', `✅ Conta ativada com sucesso!\\n\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('ativar-conta-result', `❌ Erro na ativação: ${data.erro || data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('ativar-conta-result', `❌ Erro de conexão: ${error.message}`, 'error');
             }
         }
 
@@ -1114,9 +1408,9 @@
             try {
                 const response = await fetch(`${API_BASE}/planos`);
                 const data = await response.json();
-                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                showResult('planos-publicos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
             } catch (error) {
-                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+                showResult('planos-publicos-result', `❌ Erro de conexão: ${error.message}`, 'error');
             }
         }
 
@@ -1124,35 +1418,35 @@
             try {
                 const response = await fetch(`${API_BASE}/planos/comparar`);
                 const data = await response.json();
-                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                showResult('planos-publicos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
             } catch (error) {
-                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+                showResult('planos-publicos-result', `❌ Erro de conexão: ${error.message}`, 'error');
             }
         }
 
         async function getAssinaturas() {
             if (!authToken) {
-                showResult('planos-result', 'Faça login primeiro', 'error');
+                showResult('minhas-assinaturas-result', 'Faça login primeiro', 'error');
                 return;
             }
 
             try {
-                const response = await fetch(`${API_BASE}/assinaturas`, {
+                const response = await fetch(`${API_BASE}/payment/subscriptions`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`
                     }
                 });
 
                 const data = await response.json();
-                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                showResult('minhas-assinaturas-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
             } catch (error) {
-                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+                showResult('minhas-assinaturas-result', `❌ Erro de conexão: ${error.message}`, 'error');
             }
         }
 
         async function getAssinaturaAtual() {
             if (!authToken) {
-                showResult('planos-result', 'Faça login primeiro', 'error');
+                showResult('minhas-assinaturas-result', 'Faça login primeiro', 'error');
                 return;
             }
 
@@ -1164,9 +1458,366 @@
                 });
 
                 const data = await response.json();
-                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                showResult('minhas-assinaturas-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
             } catch (error) {
-                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+                showResult('minhas-assinaturas-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function getStatusPagamento() {
+            if (!authToken) {
+                showResult('minhas-assinaturas-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/payment/status`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('minhas-assinaturas-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('minhas-assinaturas-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function cancelarAssinatura() {
+            if (!authToken) {
+                showResult('minhas-assinaturas-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const assinaturaId = document.getElementById('assinatura-id').value;
+            if (!assinaturaId) {
+                showResult('minhas-assinaturas-result', 'ID da assinatura é obrigatório', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/payment/subscription/${assinaturaId}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                showResult('minhas-assinaturas-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('minhas-assinaturas-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadPlanosDropdown() {
+            console.log('🔍 Iniciando carregamento de planos...');
+            console.log('🌐 URL da API:', `${API_BASE}/planos`);
+            
+            try {
+                showResult('nova-assinatura-result', '⏳ Carregando planos...', 'info');
+                
+                const response = await fetch(`${API_BASE}/planos`);
+                console.log('📡 Response status:', response.status);
+                console.log('📡 Response headers:', response.headers);
+                
+                const data = await response.json();
+                console.log('📦 Dados recebidos:', data);
+                
+                if (response.ok) {
+                    const planos = Array.isArray(data) ? data : (data.planos || []);
+                    console.log('📋 Planos processados:', planos);
+                    
+                    if (planos.length > 0) {
+                        const select = document.getElementById('plano-assinatura');
+                        if (!select) {
+                            console.error('❌ Elemento select não encontrado!');
+                            showResult('nova-assinatura-result', `❌ Erro: Campo de seleção de planos não encontrado`, 'error');
+                            return;
+                        }
+                        
+                        select.innerHTML = '<option value="">Selecione um plano</option>';
+                        
+                        planos.forEach(plano => {
+                            const option = document.createElement('option');
+                            option.value = plano.id;
+                            option.textContent = `${plano.nome} - R$ ${plano.preco_mensal || plano.preco}/mês`;
+                            select.appendChild(option);
+                            console.log(`➕ Plano adicionado: ${plano.nome}`);
+                        });
+                        
+                        showResult('nova-assinatura-result', `✅ ${planos.length} planos carregados com sucesso!`, 'success');
+                        console.log('✅ Planos carregados no dropdown com sucesso!');
+                    } else {
+                        console.warn('⚠️ Nenhum plano encontrado na resposta');
+                        showResult('nova-assinatura-result', `❌ Nenhum plano encontrado`, 'error');
+                    }
+                } else {
+                    console.error('❌ Erro na resposta:', data);
+                    showResult('nova-assinatura-result', `❌ Erro ao carregar planos: ${data.erro || data.message || 'Erro desconhecido'}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro na requisição:', error);
+                showResult('nova-assinatura-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        function showPaymentFields() {
+            const tiposPagamento = document.getElementById('tipo-pagamento').value;
+            const customerSection = document.getElementById('customer-data-section');
+            const cardSection = document.getElementById('card-data-section');
+            
+            // Sempre mostrar dados do cliente
+            customerSection.style.display = 'block';
+            
+            // Mostrar dados do cartão apenas para cartão de crédito/débito
+            if (tiposPagamento === 'CREDIT_CARD' || tiposPagamento === 'DEBIT_CARD') {
+                cardSection.style.display = 'block';
+            } else {
+                cardSection.style.display = 'none';
+            }
+        }
+
+        function fillDadosCliente() {
+            document.getElementById('customer-cpf').value = '11144477735';
+            document.getElementById('customer-phone').value = '1133334444';
+            document.getElementById('customer-mobile').value = '11987654321';
+            document.getElementById('customer-additional-emails').value = 'contato@empresa.com';
+            document.getElementById('customer-cep').value = '01310100';
+            document.getElementById('customer-endereco').value = 'Avenida Paulista';
+            document.getElementById('customer-numero').value = '1000';
+            document.getElementById('customer-complemento').value = 'Andar 10';
+            document.getElementById('customer-bairro').value = 'Bela Vista';
+            document.getElementById('customer-cidade').value = 'São Paulo';
+            document.getElementById('customer-estado').value = 'SP';
+            document.getElementById('customer-company').value = 'Empresa Teste LTDA';
+            document.getElementById('customer-municipal').value = '123456789';
+            document.getElementById('customer-estadual').value = '987654321';
+            document.getElementById('customer-group').value = 'Clientes Premium';
+            document.getElementById('customer-observations').value = 'Cliente de teste para desenvolvimento';
+            
+            showResult('nova-assinatura-result', '✅ Dados de teste preenchidos!', 'success');
+        }
+
+        async function criarClientePagamento() {
+            console.log('🔍 Iniciando criação de cliente no Asaas...');
+            
+            if (!authToken) {
+                showResult('nova-assinatura-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            // Coletar todos os dados do formulário
+            const customerData = {
+                // Obrigatórios
+                cpfCnpj: document.getElementById('customer-cpf').value.trim(),
+                
+                // Contato
+                phone: document.getElementById('customer-phone').value.trim(),
+                mobilePhone: document.getElementById('customer-mobile').value.trim(),
+                additionalEmails: document.getElementById('customer-additional-emails').value.trim(),
+                
+                // Endereço
+                postalCode: document.getElementById('customer-cep').value.trim(),
+                address: document.getElementById('customer-endereco').value.trim(),
+                addressNumber: document.getElementById('customer-numero').value.trim(),
+                complement: document.getElementById('customer-complemento').value.trim(),
+                province: document.getElementById('customer-bairro').value.trim(),
+                
+                // Empresariais
+                company: document.getElementById('customer-company').value.trim(),
+                municipalInscription: document.getElementById('customer-municipal').value.trim(),
+                stateInscription: document.getElementById('customer-estadual').value.trim(),
+                
+                // Adicionais
+                groupName: document.getElementById('customer-group').value.trim(),
+                observations: document.getElementById('customer-observations').value.trim(),
+                foreignCustomer: document.getElementById('customer-foreign').checked,
+                notificationDisabled: document.getElementById('customer-notifications-disabled').checked
+            };
+
+            // Remover campos vazios
+            Object.keys(customerData).forEach(key => {
+                if (customerData[key] === '' || customerData[key] === null) {
+                    delete customerData[key];
+                }
+            });
+
+            console.log('📤 Dados do cliente:', customerData);
+
+            if (!customerData.cpfCnpj) {
+                showResult('nova-assinatura-result', '❌ CPF/CNPJ é obrigatório', 'error');
+                return;
+            }
+
+            try {
+                showResult('nova-assinatura-result', '⏳ Criando cliente no Asaas...', 'info');
+                
+                const response = await fetch(`${API_BASE}/payment/customer`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(customerData)
+                });
+
+                const data = await response.json();
+                console.log('📦 Resposta do servidor:', data);
+                
+                if (response.ok) {
+                    showResult('nova-assinatura-result', `✅ Cliente criado com sucesso!\n\nID Asaas: ${data.customer?.id || 'N/A'}\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('nova-assinatura-result', `❌ Erro ao criar cliente:\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro na requisição:', error);
+                showResult('nova-assinatura-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function criarAssinatura() {
+            console.log('🔍 Iniciando criação de assinatura...');
+            
+            if (!authToken) {
+                showResult('nova-assinatura-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const planoId = document.getElementById('plano-assinatura').value;
+            const billingType = document.getElementById('tipo-pagamento').value;
+
+            if (!planoId) {
+                showResult('nova-assinatura-result', 'Selecione um plano', 'error');
+                return;
+            }
+
+            console.log('📋 Dados da assinatura:', { planoId, billingType });
+
+            try {
+                showResult('nova-assinatura-result', '⏳ Criando assinatura...', 'info');
+
+                // 1. Primeiro, verificar se o cliente já existe no Asaas
+                console.log('1️⃣ Verificando dados do usuário...');
+                const userResponse = await fetch(`${API_BASE}/usuario`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!userResponse.ok) {
+                    showResult('nova-assinatura-result', '❌ Erro ao verificar dados do usuário', 'error');
+                    return;
+                }
+
+                const userData = await userResponse.json();
+                console.log('👤 Dados do usuário:', userData);
+
+                // 2. Se não tem asaas_customer_id, criar cliente primeiro
+                if (!userData.asaas_customer_id) {
+                    console.log('2️⃣ Usuário não tem cliente Asaas, criando...');
+                    showResult('nova-assinatura-result', '⏳ Criando dados de pagamento...', 'info');
+
+                    const customerData = {
+                        phone: document.getElementById('customer-telefone').value || '4738001919',
+                        mobilePhone: document.getElementById('customer-telefone').value || '47999376637',
+                        cpfCnpj: document.getElementById('customer-cpf').value || '24971563792',
+                        address: {
+                            postalCode: document.getElementById('customer-cep').value || '01310-000',
+                            address: document.getElementById('customer-endereco').value || 'Av. Paulista',
+                            addressNumber: document.getElementById('customer-numero').value || '150',
+                            complement: '',
+                            province: document.getElementById('customer-cidade').value || 'Centro',
+                            city: document.getElementById('customer-cidade').value || 'São Paulo',
+                            state: document.getElementById('customer-estado').value || 'SP'
+                        }
+                    };
+
+                    console.log('💳 Dados do cliente:', customerData);
+
+                    const customerResponse = await fetch(`${API_BASE}/payment/customer`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(customerData)
+                    });
+
+                    if (!customerResponse.ok) {
+                        const customerError = await customerResponse.json();
+                        console.error('❌ Erro ao criar cliente:', customerError);
+                        showResult('nova-assinatura-result', `❌ Erro ao criar dados de pagamento: ${customerError.erro || 'Erro desconhecido'}`, 'error');
+                        return;
+                    }
+
+                    const customerResult = await customerResponse.json();
+                    console.log('✅ Cliente criado:', customerResult);
+                }
+
+                // 3. Agora criar a assinatura
+                console.log('3️⃣ Criando assinatura...');
+                showResult('nova-assinatura-result', '⏳ Criando assinatura...', 'info');
+
+                const subscriptionData = {
+                    planoId: planoId,
+                    billingType: billingType
+                };
+
+                // Adicionar dados do cartão se necessário
+                if (billingType === 'CREDIT_CARD' || billingType === 'DEBIT_CARD') {
+                    const expiryValue = document.getElementById('card-expiry').value;
+                    if (!expiryValue || !expiryValue.includes('/')) {
+                        showResult('nova-assinatura-result', '❌ Validade do cartão inválida (use MM/AA)', 'error');
+                        return;
+                    }
+
+                    const expiryMonth = expiryValue.split('/')[0];
+                    const expiryYear = '20' + expiryValue.split('/')[1];
+
+                    subscriptionData.creditCard = {
+                        holderName: document.getElementById('card-holder').value,
+                        number: document.getElementById('card-number').value,
+                        expiryMonth: expiryMonth,
+                        expiryYear: expiryYear,
+                        ccv: document.getElementById('card-cvv').value
+                    };
+
+                    subscriptionData.creditCardHolderInfo = {
+                        name: document.getElementById('card-holder').value,
+                        email: userData.email,
+                        cpfCnpj: document.getElementById('card-cpf').value,
+                        postalCode: document.getElementById('customer-cep').value,
+                        addressNumber: document.getElementById('customer-numero').value,
+                        phone: document.getElementById('card-phone').value,
+                        mobilePhone: document.getElementById('card-phone').value
+                    };
+                }
+
+                console.log('📦 Dados da assinatura completos:', subscriptionData);
+
+                const response = await fetch(`${API_BASE}/payment/subscription`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(subscriptionData)
+                });
+
+                const data = await response.json();
+                console.log('📊 Resposta da assinatura:', data);
+
+                if (response.ok) {
+                    showResult('nova-assinatura-result', `✅ Assinatura criada com sucesso!\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                    console.log('✅ Assinatura criada com sucesso!');
+                } else {
+                    showResult('nova-assinatura-result', `❌ Erro ao criar assinatura: ${data.erro || 'Erro desconhecido'}\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                    console.error('❌ Erro ao criar assinatura:', data);
+                }
+            } catch (error) {
+                console.error('❌ Erro na requisição:', error);
+                showResult('nova-assinatura-result', `❌ Erro de conexão: ${error.message}`, 'error');
             }
         }
 
@@ -1210,33 +1861,65 @@
         }
 
         async function criarLoja() {
+            console.log('🔍 Iniciando criação de loja...');
+            
             if (!authToken) {
                 showResult('loja-result', 'Faça login primeiro', 'error');
                 return;
             }
 
-            const nome = document.getElementById('loja-nome').value;
-            const descricao = document.getElementById('loja-descricao').value;
-            const categoria = document.getElementById('loja-categoria').value;
+            const nomeElement = document.getElementById('loja-nome');
+            const descricaoElement = document.getElementById('loja-descricao');
+            const categoriaElement = document.getElementById('loja-categoria');
+            
+            if (!nomeElement) {
+                console.error('❌ Campo nome não encontrado!');
+                showResult('loja-result', 'Erro: Campo nome não encontrado na página', 'error');
+                return;
+            }
+            
+            const nome = nomeElement.value.trim();
+            const descricao = descricaoElement ? descricaoElement.value.trim() : '';
+            const categoria = categoriaElement ? categoriaElement.value : '';
+            
+            console.log('📝 Dados da loja:', { nome, descricao, categoria });
 
             if (!nome) {
+                console.warn('⚠️ Nome da loja não preenchido');
                 showResult('loja-result', 'Nome da loja é obrigatório', 'error');
                 return;
             }
 
             try {
+                console.log('📡 Enviando requisição para criar loja...');
+                showResult('loja-result', '⏳ Criando loja...', 'info');
+                
                 const response = await fetch(`${API_BASE}/loja`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${authToken}`
                     },
-                    body: JSON.stringify({ nome, descricao, categoria })
+                    body: JSON.stringify({ 
+                        nome_loja: nome, 
+                        descricao, 
+                        categoria 
+                    })
                 });
 
+                console.log('📡 Response status:', response.status);
                 const data = await response.json();
+                console.log('📦 Dados da resposta:', data);
+                
                 showResult('loja-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    console.log('✅ Loja criada com sucesso!');
+                } else {
+                    console.error('❌ Erro ao criar loja:', data);
+                }
             } catch (error) {
+                console.error('❌ Erro na requisição:', error);
                 showResult('loja-result', `❌ Erro de conexão: ${error.message}`, 'error');
             }
         }
@@ -1577,6 +2260,8 @@
             updateAuthStatus();
             // Testar conexão inicial
             testHealth();
+            // Inicializar campos de pagamento
+            showPaymentFields();
         };
     </script>
 </body>
