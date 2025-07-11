@@ -1,6 +1,6 @@
 import * as Yup from 'yup';
-import Loja from '../models/Loja';
-import User from '../models/User';
+import Loja from '../models/Loja.js';
+import User from '../models/User.js';
 
 class LojaController {
   // Criar nova loja

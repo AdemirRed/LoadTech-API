@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔴 LoadTech Redis Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            font-weight: bold;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-content {
+            padding: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .keys-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .key-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e1e8ed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .key-item:last-child {
+            border-bottom: none;
+        }
+
+        .key-item:hover {
+            background: #e9ecef;
+        }
+
+        .key-name {
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .key-value {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin: 10px;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔴 LoadTech Redis Manager</h1>
+            <p>Gerenciamento visual do cache Redis</p>
+        </div>
+
+        <div class="content">
+            <!-- Estatísticas -->
+            <div class="section">
+                <div class="section-header">
+                    📊 Estatísticas do Redis
+                    <button class="btn" onclick="loadStats()">🔄 Atualizar</button>
+                </div>
+                <div class="section-content">
+                    <div id="stats-content" class="loading">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- Gerenciar Chaves -->
+            <div class="section">
+                <div class="section-header">
+                    🔑 Gerenciar Chaves
+                    <div>
+                        <button class="btn" onclick="loadKeys()">📋 Listar Chaves</button>
+                        <button class="btn btn-danger" onclick="clearCache()">🗑️ Limpar Cache</button>
+                    </div>
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <input type="text" id="key-input" placeholder="Digite uma chave para buscar..." />
+                        <button class="btn" onclick="getKey()">🔍 Buscar</button>
+                        <button class="btn btn-danger" onclick="deleteKey()">🗑️ Deletar</button>
+                    </div>
+                    
+                    <div id="key-value-display"></div>
+                    <div id="keys-list"></div>
+                </div>
+            </div>
+
+            <!-- Adicionar Chave -->
+            <div class="section">
+                <div class="section-header">
+                    ➕ Adicionar/Editar Chave
+                </div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <input type="text" id="new-key" placeholder="Nome da chave" />
+                        <input type="number" id="new-ttl" placeholder="TTL (segundos)" value="3600" />
+                    </div>
+                    <textarea id="new-value" placeholder="Valor (JSON)" rows="5" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 8px; font-family: 'Courier New', monospace;"></textarea>
+                    <button class="btn" onclick="setKey()" style="margin-top: 10px;">💾 Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+
+        // Carregar estatísticas
+        async function loadStats() {
+            try {
+                document.getElementById('stats-content').innerHTML = '<div class="loading">Carregando...</div>';
+                
+                const response = await fetch(`${API_BASE}/cache/stats`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const html = `
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">${data.cache.total_keys}</div>
+                                <div class="stat-label">Chaves de Cache</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${data.cache.rate_limit_keys}</div>
+                                <div class="stat-label">Chaves de Rate Limit</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${data.redis.connected ? '✅' : '❌'}</div>
+                                <div class="stat-label">Status Conexão</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${new Date(data.timestamp).toLocaleTimeString()}</div>
+                                <div class="stat-label">Última Atualização</div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('stats-content').innerHTML = html;
+                } else {
+                    throw new Error(data.erro || 'Erro ao carregar estatísticas');
+                }
+            } catch (error) {
+                document.getElementById('stats-content').innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Buscar chave específica
+        async function getKey() {
+            const key = document.getElementById('key-input').value.trim();
+            if (!key) {
+                alert('Digite uma chave para buscar');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cache/${encodeURIComponent(key)}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const html = `
+                        <div class="key-value">
+                            <strong>Chave:</strong> ${data.key}<br>
+                            <strong>Existe:</strong> ${data.exists ? '✅ Sim' : '❌ Não'}<br>
+                            <strong>Valor:</strong><br>
+                            ${data.value ? JSON.stringify(data.value, null, 2) : 'null'}
+                        </div>
+                    `;
+                    document.getElementById('key-value-display').innerHTML = html;
+                } else {
+                    throw new Error(data.erro || 'Erro ao buscar chave');
+                }
+            } catch (error) {
+                document.getElementById('key-value-display').innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Deletar chave
+        async function deleteKey() {
+            const key = document.getElementById('key-input').value.trim();
+            if (!key) {
+                alert('Digite uma chave para deletar');
+                return;
+            }
+
+            if (!confirm(`Tem certeza que deseja deletar a chave "${key}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cache/${encodeURIComponent(key)}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    document.getElementById('key-value-display').innerHTML = `<div class="success">✅ ${data.message}</div>`;
+                    loadStats(); // Atualizar estatísticas
+                } else {
+                    throw new Error(data.erro || 'Erro ao deletar chave');
+                }
+            } catch (error) {
+                document.getElementById('key-value-display').innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Salvar nova chave
+        async function setKey() {
+            const key = document.getElementById('new-key').value.trim();
+            const ttl = parseInt(document.getElementById('new-ttl').value) || 3600;
+            const value = document.getElementById('new-value').value.trim();
+
+            if (!key || !value) {
+                alert('Preencha a chave e o valor');
+                return;
+            }
+
+            try {
+                let parsedValue;
+                try {
+                    parsedValue = JSON.parse(value);
+                } catch {
+                    parsedValue = value; // Se não for JSON, usar como string
+                }
+
+                const response = await fetch(`${API_BASE}/admin/cache/${encodeURIComponent(key)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        value: parsedValue,
+                        ttl: ttl
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    document.getElementById('key-value-display').innerHTML = `<div class="success">✅ Chave "${key}" salva com sucesso!</div>`;
+                    document.getElementById('new-key').value = '';
+                    document.getElementById('new-value').value = '';
+                    loadStats(); // Atualizar estatísticas
+                } else {
+                    throw new Error(data.erro || 'Erro ao salvar chave');
+                }
+            } catch (error) {
+                document.getElementById('key-value-display').innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Limpar cache
+        async function clearCache() {
+            if (!confirm('Tem certeza que deseja limpar TODO o cache?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cache/clear`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    document.getElementById('key-value-display').innerHTML = `<div class="success">✅ ${data.message} (${data.deleted_keys} chaves deletadas)</div>`;
+                    loadStats(); // Atualizar estatísticas
+                } else {
+                    throw new Error(data.erro || 'Erro ao limpar cache');
+                }
+            } catch (error) {
+                document.getElementById('key-value-display').innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Carregar ao iniciar a página
+        window.onload = function() {
+            loadStats();
+        };
+    </script>
+</body>
+</html>

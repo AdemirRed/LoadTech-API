@@ -1,4 +1,6 @@
-require('dotenv').config(); // Carrega variáveis do .env
+import dotenv from 'dotenv';
+dotenv.config(); // Carrega variáveis do .env
+
 import { WebSocketServer } from 'ws'; // Importa WebSocketServer
 import app from './app.js'; // Importa a aplicação
 import cors from 'cors';

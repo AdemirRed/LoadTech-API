@@ -1,0 +1,25 @@
+# Configuração para deploy no Render
+services:
+  - type: web
+    name: loadtech-api
+    env: node
+    region: oregon # ou singapore (mais próximo do Brasil)
+    plan: starter # ou free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000 # Porta padrão do Render
+    
+    # Auto-deploy do branch main
+    autoDeploy: true
+    
+    # Configurações para volumes persistentes (recomendado para uploads em produção)
+    # Descomente as linhas abaixo se quiser persistir uploads entre deploys
+    # disk:
+    #   name: uploads-storage
+    #   mountPath: /opt/render/project/src/public/uploads
+    #   sizeGB: 1

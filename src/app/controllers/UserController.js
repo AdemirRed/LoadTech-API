@@ -1,11 +1,11 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import * as Yup from 'yup';
-import User from '../models/User';
-import Plano from '../models/Plano';
-import Assinatura from '../models/Assinatura';
-import authConfig from '../../config/auth';
-import sendEmail from '../../utils/mailer';
+import User from '../models/User.js';
+import Plano from '../models/Plano.js';
+import Assinatura from '../models/Assinatura.js';
+import authConfig from '../../config/auth.js';
+import sendEmail from '../../utils/mailer.js';
 
 class UserController {
   // Registrar novo usuário

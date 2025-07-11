@@ -1,13 +1,13 @@
 import { Sequelize } from 'sequelize';
 
-import configDatabase from '../config/database';
+import configDatabase from '../config/database.js';
 
 // Importar todos os models
-import User from '../app/models/User';
-import Plano from '../app/models/Plano';
-import Assinatura from '../app/models/Assinatura';
-import Loja from '../app/models/Loja';
-import Pagamento from '../app/models/Pagamento';
+import User from '../app/models/User.js';
+import Plano from '../app/models/Plano.js';
+import Assinatura from '../app/models/Assinatura.js';
+import Loja from '../app/models/Loja.js';
+import Pagamento from '../app/models/Pagamento.js';
 
 const models = [User, Plano, Assinatura, Loja, Pagamento];
 

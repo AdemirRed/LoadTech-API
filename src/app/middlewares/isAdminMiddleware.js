@@ -1,5 +1,5 @@
 // app/middlewares/isAdminMiddleware.js
-import User from '../models/User'; // Import direto, sem destructuring
+import User from '../models/User.js'; // Import direto, sem destructuring
 
 const isAdmin = async (req, res, next) => {
   if (!req.user || !req.user.id) {

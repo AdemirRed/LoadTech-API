@@ -1,4 +1,5 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 const config = {
   dialect: 'postgres',
@@ -40,4 +41,4 @@ const config = {
   seederStorageTableSchema: 'loadtech',
 };
 
-module.exports = config;
+export default config;

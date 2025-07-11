@@ -10,3 +10,25 @@ yarn-error.log*
 # Logs
 logs/
 *.log
+
+# Uploads - Ignorar arquivos mas manter estrutura
+public/uploads/**/*
+!public/uploads/**/.gitkeep
+!public/uploads/.gitignore
+
+# Arquivos de teste
+test-*.js
+test-*.html
+serve-*.js
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+*.doc
+*.docx
+*.md
+
+# Temporários
+temp/
+tmp/

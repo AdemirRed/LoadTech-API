@@ -1,8 +1,8 @@
 import * as Yup from 'yup';
-import Assinatura from '../models/Assinatura';
-import Plano from '../models/Plano';
-import User from '../models/User';
-import Pagamento from '../models/Pagamento';
+import Assinatura from '../models/Assinatura.js';
+import Plano from '../models/Plano.js';
+import User from '../models/User.js';
+import Pagamento from '../models/Pagamento.js';
 
 class AssinaturaController {
   // Listar assinaturas do usuário

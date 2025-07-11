@@ -1,6 +1,6 @@
 import * as Yup from 'yup';
-import Plano from '../models/Plano';
-import Assinatura from '../models/Assinatura';
+import Plano from '../models/Plano.js';
+import Assinatura from '../models/Assinatura.js';
 
 class PlanoController {
   // Listar todos os planos ativos
