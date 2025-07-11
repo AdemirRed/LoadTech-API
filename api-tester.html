@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 LoadTech API - Testador Completo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .section {
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .section-content {
+            padding: 20px;
+            background: white;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px 5px 5px 0;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #e83e8c);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8, #6f42c1);
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .auth-status {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .auth-status.authenticated {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .tabs {
+            display: flex;
+            background: #e9ecef;
+            border-radius: 8px 8px 0 0;
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .tab.active {
+            background: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .json-display {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .quick-fill {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .quick-fill button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 2px;
+            font-size: 11px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 15px;
+            }
+            
+            .container {
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 LoadTech API - Testador Completo</h1>
+            <p>Interface para testar todas as rotas da API</p>
+        </div>
+
+        <div class="content">
+            <!-- Seção de Autenticação -->
+            <div class="section">
+                <div class="section-header">
+                    🔐 Autenticação
+                </div>
+                <div class="section-content">
+                    <div class="auth-status" id="auth-status">
+                        Não autenticado
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('login-tab', this)">Login</button>
+                        <button class="tab" onclick="showTab('cadastro-tab', this)">Cadastro</button>
+                        <button class="tab" onclick="showTab('recuperacao-tab', this)">Recuperar Senha</button>
+                    </div>
+
+                    <!-- Login -->
+                    <div id="login-tab" class="tab-content active">
+                        <div class="quick-fill">
+                            <strong>📋 Preenchimento Rápido:</strong><br>
+                            <button onclick="fillLogin('admin')">Admin</button>
+                            <button onclick="fillLogin('user')">Usuário</button>
+                            <button onclick="fillLogin('teste')">Teste</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="login-email">Email:</label>
+                            <input type="email" id="login-email" placeholder="seu_email@example.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="login-senha">Senha:</label>
+                            <input type="password" id="login-senha" placeholder="Sua senha">
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="login()">🔑 Fazer Login</button>
+                        
+                        <div id="login-result"></div>
+                    </div>
+
+                    <!-- Cadastro -->
+                    <div id="cadastro-tab" class="tab-content">
+                        <div class="quick-fill">
+                            <strong>📋 Preenchimento Rápido:</strong><br>
+                            <button onclick="fillCadastro()">Usuário Teste</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-nome">Nome:</label>
+                            <input type="text" id="cadastro-nome" placeholder="Seu nome completo">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-email">Email:</label>
+                            <input type="email" id="cadastro-email" placeholder="seu_email@example.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cadastro-senha">Senha:</label>
+                            <input type="password" id="cadastro-senha" placeholder="Mínimo 6 caracteres">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-telefone">Telefone:</label>
+                            <input type="text" id="cadastro-telefone" placeholder="(11) 99999-9999">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-plano">Plano (opcional):</label>
+                            <select id="cadastro-plano">
+                                <option value="">Sem plano</option>
+                                <option value="basico">Básico</option>
+                                <option value="pro">Pro</option>
+                                <option value="enterprise">Enterprise</option>
+                            </select>
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="cadastro()">📝 Cadastrar</button>
+                        
+                        <div id="cadastro-result"></div>
+                    </div>
+
+                    <!-- Recuperação de Senha -->
+                    <div id="recuperacao-tab" class="tab-content">
+                        <div class="form-group">
+                            <label for="recuperacao-email">Email:</label>
+                            <input type="email" id="recuperacao-email" placeholder="seu_email@example.com">
+                        </div>
+                        
+                        <button class="btn btn-warning" onclick="esqueceuSenha()">📧 Enviar Código</button>
+
+                        <hr style="margin: 20px 0;">
+
+                        <div class="form-group">
+                            <label for="redefinir-email">Email:</label>
+                            <input type="email" id="redefinir-email" placeholder="seu_email@example.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="redefinir-codigo">Código:</label>
+                            <input type="text" id="redefinir-codigo" placeholder="Código recebido por email">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="redefinir-senha">Nova Senha:</label>
+                            <input type="password" id="redefinir-senha" placeholder="Nova senha">
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="redefinirSenha()">🔄 Redefinir Senha</button>
+                        
+                        <div id="recuperacao-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Ativação de Conta -->
+            <div class="section">
+                <div class="section-header">
+                    ✉️ Ativação de Conta
+                </div>
+                <div class="section-content">
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('verificar-email-tab', this)">Verificar Email</button>
+                        <button class="tab" onclick="showTab('reenviar-codigo-tab', this)">Reenviar Código</button>
+                    </div>
+
+                    <!-- Verificar Email -->
+                    <div id="verificar-email-tab" class="tab-content active">
+                        <div class="form-group">
+                            <label for="verificar-email">Email:</label>
+                            <input type="email" id="verificar-email" placeholder="seu@email.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="codigo-verificacao">Código de Verificação:</label>
+                            <input type="text" id="codigo-verificacao" placeholder="123456" maxlength="6">
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="verificarEmail()">✅ Verificar Email</button>
+                        
+                        <div id="verificar-email-result"></div>
+                    </div>
+
+                    <!-- Reenviar Código -->
+                    <div id="reenviar-codigo-tab" class="tab-content">
+                        <div class="form-group">
+                            <label for="reenviar-email">Email:</label>
+                            <input type="email" id="reenviar-email" placeholder="seu@email.com">
+                        </div>
+                        
+                        <button class="btn btn-warning" onclick="reenviarCodigo()">📧 Reenviar Código</button>
+                        
+                        <div id="reenviar-codigo-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Upload -->
+            <div class="section">
+                <div class="section-header">
+                    📤 Sistema de Upload
+                </div>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label for="upload-type">Tipo de Upload:</label>
+                        <select id="upload-type">
+                            <option value="avatar">Avatar do Usuário</option>
+                            <option value="logo">Logo da Loja</option>
+                            <option value="banner">Banner da Loja</option>
+                            <option value="produto">Imagem de Produto</option>
+                            <option value="documento">Documento</option>
+                            <option value="multiple">Múltiplas Imagens</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="upload-file">Arquivo:</label>
+                        <input type="file" id="upload-file" accept="image/*,application/pdf,.doc,.docx" multiple>
+                    </div>
+
+                    <button class="btn btn-success" onclick="uploadFile()">📤 Upload</button>
+                    <button class="btn btn-info" onclick="getUploadStats()">📊 Estatísticas</button>
+                    <button class="btn btn-warning" onclick="listFiles()">📋 Listar Arquivos</button>
+
+                    <div id="upload-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Usuário -->
+            <div class="section">
+                <div class="section-header">
+                    👤 Gerenciamento de Usuário
+                </div>
+                <div class="section-content">
+                    <button class="btn btn-info" onclick="getUsuario()">👤 Meus Dados</button>
+                    <button class="btn btn-warning" onclick="showUpdateUser()">✏️ Atualizar</button>
+
+                    <div id="update-user-form" style="display:none; margin-top: 15px;">
+                        <div class="form-group">
+                            <label for="update-nome">Nome:</label>
+                            <input type="text" id="update-nome" placeholder="Novo nome">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-telefone">Telefone:</label>
+                            <input type="text" id="update-telefone" placeholder="Novo telefone">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-senha-atual">Senha Atual:</label>
+                            <input type="password" id="update-senha-atual" placeholder="Senha atual (se alterar senha)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-senha">Nova Senha:</label>
+                            <input type="password" id="update-senha" placeholder="Nova senha (opcional)">
+                        </div>
+
+                        <button class="btn btn-success" onclick="updateUsuario()">💾 Salvar</button>
+                    </div>
+
+                    <div id="usuario-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Planos -->
+            <div class="section">
+                <div class="section-header">
+                    💎 Planos e Assinaturas
+                </div>
+                <div class="section-content">
+                    <button class="btn btn-info" onclick="getPlanos()">💎 Listar Planos</button>
+                    <button class="btn btn-info" onclick="compararPlanos()">⚖️ Comparar Planos</button>
+                    <button class="btn btn-success" onclick="getAssinaturas()">📋 Minhas Assinaturas</button>
+                    <button class="btn btn-warning" onclick="getAssinaturaAtual()">🔥 Assinatura Atual</button>
+
+                    <div id="planos-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Loja -->
+            <div class="section">
+                <div class="section-header">
+                    🏪 Gerenciamento de Loja
+                </div>
+                <div class="section-content">
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('loja-info-tab', this)">Informações</button>
+                        <button class="tab" onclick="showTab('loja-create-tab', this)">Criar Loja</button>
+                        <button class="tab" onclick="showTab('loja-manage-tab', this)">Gerenciar</button>
+                    </div>
+
+                    <div id="loja-info-tab" class="tab-content active">
+                        <button class="btn btn-info" onclick="getMinhaLoja()">🏪 Minha Loja</button>
+                        
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="loja-slug">Visualizar Loja Pública (slug):</label>
+                            <input type="text" id="loja-slug" placeholder="slug-da-loja">
+                        </div>
+                        <button class="btn btn-success" onclick="visualizarLoja()">👁️ Visualizar</button>
+                    </div>
+
+                    <div id="loja-create-tab" class="tab-content">
+                        <div class="form-group">
+                            <label for="loja-nome">Nome da Loja:</label>
+                            <input type="text" id="loja-nome" placeholder="Nome da sua loja">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="loja-descricao">Descrição:</label>
+                            <textarea id="loja-descricao" placeholder="Descrição da loja" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="loja-categoria">Categoria:</label>
+                            <select id="loja-categoria">
+                                <option value="moda">Moda</option>
+                                <option value="eletronicos">Eletrônicos</option>
+                                <option value="casa">Casa e Decoração</option>
+                                <option value="esportes">Esportes</option>
+                                <option value="livros">Livros</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+
+                        <button class="btn btn-success" onclick="criarLoja()">🏪 Criar Loja</button>
+                    </div>
+
+                    <div id="loja-manage-tab" class="tab-content">
+                        <button class="btn btn-warning" onclick="showUpdateLoja()">✏️ Atualizar Dados</button>
+                        <button class="btn btn-info" onclick="toggleLojaStatus()">🔄 Ativar/Desativar</button>
+
+                        <div id="update-loja-form" style="display:none; margin-top: 15px;">
+                            <div class="form-group">
+                                <label for="update-loja-nome">Nome:</label>
+                                <input type="text" id="update-loja-nome" placeholder="Novo nome">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="update-loja-descricao">Descrição:</label>
+                                <textarea id="update-loja-descricao" placeholder="Nova descrição" rows="3"></textarea>
+                            </div>
+
+                            <button class="btn btn-success" onclick="updateLoja()">💾 Salvar</button>
+                        </div>
+                    </div>
+
+                    <div id="loja-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Cache/Redis -->
+            <div class="section">
+                <div class="section-header">
+                    🔴 Cache e Redis
+                </div>
+                <div class="section-content">
+                    <button class="btn btn-info" onclick="getCacheStats()">📊 Estatísticas</button>
+                    <button class="btn btn-warning" onclick="clearCache()">🗑️ Limpar Cache</button>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="cache-key">Chave do Cache:</label>
+                        <input type="text" id="cache-key" placeholder="Digite uma chave">
+                    </div>
+
+                    <button class="btn btn-info" onclick="getCacheValue()">🔍 Buscar</button>
+                    <button class="btn btn-danger" onclick="deleteCacheKey()">🗑️ Deletar</button>
+
+                    <div id="cache-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Administração -->
+            <div class="section">
+                <div class="section-header">
+                    👨‍💼 Administração
+                </div>
+                <div class="section-content">
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('admin-planos-tab', this)">Planos</button>
+                        <button class="tab" onclick="showTab('admin-cache-tab', this)">Cache</button>
+                        <button class="tab" onclick="showTab('admin-upload-tab', this)">Upload</button>
+                    </div>
+
+                    <div id="admin-planos-tab" class="tab-content active">
+                        <div class="form-group">
+                            <label for="admin-plano-nome">Nome do Plano:</label>
+                            <input type="text" id="admin-plano-nome" placeholder="Nome do plano">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="admin-plano-preco">Preço Mensal:</label>
+                            <input type="number" id="admin-plano-preco" placeholder="29.90" step="0.01">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="admin-plano-descricao">Descrição:</label>
+                            <textarea id="admin-plano-descricao" placeholder="Descrição do plano" rows="3"></textarea>
+                        </div>
+
+                        <button class="btn btn-success" onclick="criarPlano()">➕ Criar Plano</button>
+                    </div>
+
+                    <div id="admin-cache-tab" class="tab-content">
+                        <div class="form-group">
+                            <label for="admin-cache-key">Chave:</label>
+                            <input type="text" id="admin-cache-key" placeholder="cache:key">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="admin-cache-value">Valor (JSON):</label>
+                            <textarea id="admin-cache-value" placeholder='{"exemplo": "valor"}' rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="admin-cache-ttl">TTL (segundos):</label>
+                            <input type="number" id="admin-cache-ttl" placeholder="3600" value="3600">
+                        </div>
+
+                        <button class="btn btn-success" onclick="setCacheValue()">💾 Definir Cache</button>
+                    </div>
+
+                    <div id="admin-upload-tab" class="tab-content">
+                        <div class="form-group">
+                            <label for="admin-upload-type">Tipo:</label>
+                            <select id="admin-upload-type">
+                                <option value="imagem">Imagem</option>
+                                <option value="video">Vídeo</option>
+                                <option value="multiple">Múltiplos</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="admin-upload-file">Arquivo:</label>
+                            <input type="file" id="admin-upload-file" multiple>
+                        </div>
+
+                        <button class="btn btn-success" onclick="adminUpload()">📤 Upload Admin</button>
+                    </div>
+
+                    <div id="admin-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Testes -->
+            <div class="section">
+                <div class="section-header">
+                    🧪 Testes da API
+                </div>
+                <div class="section-content">
+                    <button class="btn btn-info" onclick="testHealth()">🔍 Health Check</button>
+                    <button class="btn btn-info" onclick="testUploadHealth()">📤 Upload Health</button>
+                    <button class="btn btn-success" onclick="runAllTests()">🚀 Executar Todos os Testes</button>
+
+                    <div id="test-result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+        let authToken = null;
+        let userData = null;
+
+        // ===== FUNÇÕES DE INTERFACE =====
+
+        function showTab(tabId, element) {
+            // Esconder todos os conteúdos de tab
+            const tabContents = element.parentElement.parentElement.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            // Remover classe active de todas as tabs
+            const tabs = element.parentElement.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // Mostrar o conteúdo da tab selecionada
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `result ${type}`;
+        }
+
+        function updateAuthStatus() {
+            const statusElement = document.getElementById('auth-status');
+            if (authToken && userData) {
+                statusElement.innerHTML = `✅ Autenticado como: ${userData.nome} (${userData.papel || 'usuário'})`;
+                statusElement.className = 'auth-status authenticated';
+            } else {
+                statusElement.innerHTML = '❌ Não autenticado';
+                statusElement.className = 'auth-status';
+            }
+        }
+
+        // ===== PREENCHIMENTO RÁPIDO =====
+
+        function fillLogin(type) {
+            const emailField = document.getElementById('login-email');
+            const senhaField = document.getElementById('login-senha');
+
+            switch (type) {
+                case 'admin':
+                    emailField.value = 'admin@loadtech.com';
+                    senhaField.value = 'admin123';
+                    break;
+                case 'user':
+                    emailField.value = 'usuario@loadtech.com';
+                    senhaField.value = '123456';
+                    break;
+                case 'teste':
+                    emailField.value = 'teste@loadtech.com';
+                    senhaField.value = '123456';
+                    break;
+            }
+        }
+
+        function fillCadastro() {
+            document.getElementById('cadastro-nome').value = 'Usuário Teste';
+            document.getElementById('cadastro-email').value = `teste${Date.now()}@loadtech.com`;
+            document.getElementById('cadastro-senha').value = '123456';
+            document.getElementById('cadastro-telefone').value = '(11) 99999-9999';
+        }
+
+        // ===== FUNÇÕES DE AUTENTICAÇÃO =====
+
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+
+            if (!email || !senha) {
+                showResult('login-result', 'Email e senha são obrigatórios', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, senha })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    userData = data.user;
+                    updateAuthStatus();
+                    showResult('login-result', `✅ Login realizado com sucesso!\\n\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('login-result', `❌ Erro no login: ${data.erro || data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('login-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function cadastro() {
+            const nome = document.getElementById('cadastro-nome').value;
+            const email = document.getElementById('cadastro-email').value;
+            const senha = document.getElementById('cadastro-senha').value;
+            const telefone = document.getElementById('cadastro-telefone').value;
+            const plano_id = document.getElementById('cadastro-plano').value;
+
+            if (!nome || !email || !senha) {
+                showResult('cadastro-result', 'Nome, email e senha são obrigatórios', 'error');
+                return;
+            }
+
+            try {
+                const body = { nome, email, senha };
+                if (telefone) body.telefone = telefone;
+                if (plano_id) body.plano_id = plano_id;
+
+                const response = await fetch(`${API_BASE}/cadastro`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('cadastro-result', `✅ Cadastro realizado com sucesso!\\n\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('cadastro-result', `❌ Erro no cadastro: ${data.erro || data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('cadastro-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function esqueceuSenha() {
+            const email = document.getElementById('recuperacao-email').value;
+
+            if (!email) {
+                showResult('recuperacao-result', 'Email é obrigatório', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/esqueci-senha`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+                showResult('recuperacao-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('recuperacao-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function redefinirSenha() {
+            const email = document.getElementById('redefinir-email').value;
+            const codigo = document.getElementById('redefinir-codigo').value;
+            const novaSenha = document.getElementById('redefinir-senha').value;
+
+            if (!email || !codigo || !novaSenha) {
+                showResult('recuperacao-result', 'Todos os campos são obrigatórios', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/redefinir-senha`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, codigo, novaSenha })
+                });
+
+                const data = await response.json();
+                showResult('recuperacao-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('recuperacao-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE ATIVAÇÃO =====
+
+        async function verificarEmail() {
+            const email = document.getElementById('verificar-email').value;
+            const codigo = document.getElementById('codigo-verificacao').value;
+
+            if (!email || !codigo) {
+                showResult('verificar-email-result', 'Email e código são obrigatórios', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/verificar-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, codigo })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    authToken = data.token;
+                    userData = data.user;
+                    updateAuthStatus();
+                    showResult('verificar-email-result', `✅ Email verificado com sucesso!\\n\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('verificar-email-result', `❌ Erro na verificação: ${data.erro || data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('verificar-email-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function reenviarCodigo() {
+            const email = document.getElementById('reenviar-email').value;
+
+            if (!email) {
+                showResult('reenviar-codigo-result', 'Email é obrigatório', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/reenviar-codigo`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('reenviar-codigo-result', `✅ Código reenviado com sucesso!\\n\\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult('reenviar-codigo-result', `❌ Erro no reenvio: ${data.erro || data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('reenviar-codigo-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE UPLOAD =====
+
+        async function uploadFile() {
+            const uploadType = document.getElementById('upload-type').value;
+            const fileInput = document.getElementById('upload-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showResult('upload-result', 'Selecione um arquivo', 'error');
+                return;
+            }
+
+            if (!authToken) {
+                showResult('upload-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            let endpoint;
+            let fieldName;
+
+            switch (uploadType) {
+                case 'avatar':
+                    endpoint = '/upload/avatar';
+                    fieldName = 'avatar';
+                    break;
+                case 'logo':
+                    endpoint = '/upload/loja/logo';
+                    fieldName = 'logo';
+                    break;
+                case 'banner':
+                    endpoint = '/upload/loja/banner';
+                    fieldName = 'banner';
+                    break;
+                case 'produto':
+                    endpoint = '/upload/produto/123e4567-e89b-12d3-a456-426614174000';
+                    fieldName = 'image';
+                    break;
+                case 'documento':
+                    endpoint = '/upload/documento';
+                    fieldName = 'documento';
+                    break;
+                case 'multiple':
+                    endpoint = '/upload/multiple';
+                    fieldName = 'images';
+                    // Adicionar todos os arquivos selecionados
+                    for (let i = 0; i < fileInput.files.length; i++) {
+                        formData.append(fieldName, fileInput.files[i]);
+                    }
+                    break;
+                default:
+                    showResult('upload-result', 'Tipo de upload inválido', 'error');
+                    return;
+            }
+
+            if (uploadType !== 'multiple') {
+                formData.append(fieldName, file);
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                showResult('upload-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('upload-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function getUploadStats() {
+            if (!authToken) {
+                showResult('upload-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/upload/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('upload-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('upload-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function listFiles() {
+            if (!authToken) {
+                showResult('upload-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/upload/loja/files`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('upload-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('upload-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE USUÁRIO =====
+
+        async function getUsuario() {
+            if (!authToken) {
+                showResult('usuario-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/usuario`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('usuario-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('usuario-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        function showUpdateUser() {
+            const form = document.getElementById('update-user-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function updateUsuario() {
+            if (!authToken) {
+                showResult('usuario-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const nome = document.getElementById('update-nome').value;
+            const telefone = document.getElementById('update-telefone').value;
+            const senha_atual = document.getElementById('update-senha-atual').value;
+            const senha = document.getElementById('update-senha').value;
+
+            const body = {};
+            if (nome) body.nome = nome;
+            if (telefone) body.telefone = telefone;
+            if (senha) {
+                body.senha = senha;
+                body.senha_atual = senha_atual;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/usuario`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                showResult('usuario-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('usuario-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE PLANOS =====
+
+        async function getPlanos() {
+            try {
+                const response = await fetch(`${API_BASE}/planos`);
+                const data = await response.json();
+                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function compararPlanos() {
+            try {
+                const response = await fetch(`${API_BASE}/planos/comparar`);
+                const data = await response.json();
+                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function getAssinaturas() {
+            if (!authToken) {
+                showResult('planos-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/assinaturas`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function getAssinaturaAtual() {
+            if (!authToken) {
+                showResult('planos-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/assinatura/atual`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('planos-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('planos-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE LOJA =====
+
+        async function getMinhaLoja() {
+            if (!authToken) {
+                showResult('loja-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/minha-loja`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('loja-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('loja-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function visualizarLoja() {
+            const slug = document.getElementById('loja-slug').value;
+
+            if (!slug) {
+                showResult('loja-result', 'Digite o slug da loja', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/loja/${slug}`);
+                const data = await response.json();
+                showResult('loja-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('loja-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function criarLoja() {
+            if (!authToken) {
+                showResult('loja-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const nome = document.getElementById('loja-nome').value;
+            const descricao = document.getElementById('loja-descricao').value;
+            const categoria = document.getElementById('loja-categoria').value;
+
+            if (!nome) {
+                showResult('loja-result', 'Nome da loja é obrigatório', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/loja`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ nome, descricao, categoria })
+                });
+
+                const data = await response.json();
+                showResult('loja-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('loja-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        function showUpdateLoja() {
+            const form = document.getElementById('update-loja-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function updateLoja() {
+            if (!authToken) {
+                showResult('loja-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const nome = document.getElementById('update-loja-nome').value;
+            const descricao = document.getElementById('update-loja-descricao').value;
+
+            const body = {};
+            if (nome) body.nome = nome;
+            if (descricao) body.descricao = descricao;
+
+            try {
+                const response = await fetch(`${API_BASE}/loja`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+                showResult('loja-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('loja-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function toggleLojaStatus() {
+            if (!authToken) {
+                showResult('loja-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/loja/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('loja-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('loja-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE CACHE =====
+
+        async function getCacheStats() {
+            try {
+                const response = await fetch(`${API_BASE}/cache/stats`);
+                const data = await response.json();
+                showResult('cache-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('cache-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearCache() {
+            if (!authToken) {
+                showResult('cache-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cache/clear`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('cache-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('cache-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function getCacheValue() {
+            const key = document.getElementById('cache-key').value;
+
+            if (!key) {
+                showResult('cache-result', 'Digite uma chave', 'error');
+                return;
+            }
+
+            if (!authToken) {
+                showResult('cache-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cache/${encodeURIComponent(key)}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('cache-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('cache-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteCacheKey() {
+            const key = document.getElementById('cache-key').value;
+
+            if (!key) {
+                showResult('cache-result', 'Digite uma chave', 'error');
+                return;
+            }
+
+            if (!authToken) {
+                showResult('cache-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cache/${encodeURIComponent(key)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResult('cache-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('cache-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE ADMINISTRAÇÃO =====
+
+        async function criarPlano() {
+            if (!authToken) {
+                showResult('admin-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const nome = document.getElementById('admin-plano-nome').value;
+            const preco_mensal = parseFloat(document.getElementById('admin-plano-preco').value);
+            const descricao = document.getElementById('admin-plano-descricao').value;
+
+            if (!nome || !preco_mensal) {
+                showResult('admin-result', 'Nome e preço são obrigatórios', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/planos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ nome, preco_mensal, descricao })
+                });
+
+                const data = await response.json();
+                showResult('admin-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('admin-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function setCacheValue() {
+            if (!authToken) {
+                showResult('admin-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const key = document.getElementById('admin-cache-key').value;
+            const valueStr = document.getElementById('admin-cache-value').value;
+            const ttl = parseInt(document.getElementById('admin-cache-ttl').value);
+
+            if (!key || !valueStr) {
+                showResult('admin-result', 'Chave e valor são obrigatórios', 'error');
+                return;
+            }
+
+            let value;
+            try {
+                value = JSON.parse(valueStr);
+            } catch {
+                value = valueStr; // Se não for JSON, usar como string
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/cache/${encodeURIComponent(key)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ value, ttl })
+                });
+
+                const data = await response.json();
+                showResult('admin-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('admin-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function adminUpload() {
+            if (!authToken) {
+                showResult('admin-result', 'Faça login primeiro', 'error');
+                return;
+            }
+
+            const uploadType = document.getElementById('admin-upload-type').value;
+            const fileInput = document.getElementById('admin-upload-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showResult('admin-result', 'Selecione um arquivo', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            let endpoint;
+
+            switch (uploadType) {
+                case 'imagem':
+                    endpoint = '/upload/imagem';
+                    formData.append('file', file);
+                    break;
+                case 'video':
+                    endpoint = '/upload/video';
+                    formData.append('file', file);
+                    break;
+                case 'multiple':
+                    endpoint = '/upload/imagens';
+                    for (let i = 0; i < fileInput.files.length; i++) {
+                        formData.append('files', fileInput.files[i]);
+                    }
+                    break;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                showResult('admin-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('admin-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== FUNÇÕES DE TESTE =====
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                showResult('test-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('test-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function testUploadHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/uploads/health`);
+                const data = await response.json();
+                showResult('test-result', JSON.stringify(data, null, 2), response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult('test-result', `❌ Erro de conexão: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            let results = '🧪 EXECUTANDO TODOS OS TESTES...\\n\\n';
+            
+            // Test 1: Health Check
+            try {
+                const healthResponse = await fetch(`${API_BASE}/health`);
+                const healthData = await healthResponse.json();
+                results += `✅ Health Check: ${healthResponse.ok ? 'PASS' : 'FAIL'}\\n`;
+            } catch (error) {
+                results += `❌ Health Check: FAIL - ${error.message}\\n`;
+            }
+
+            // Test 2: Upload Health
+            try {
+                const uploadHealthResponse = await fetch(`${API_BASE}/uploads/health`);
+                results += `✅ Upload Health: ${uploadHealthResponse.ok ? 'PASS' : 'FAIL'}\\n`;
+            } catch (error) {
+                results += `❌ Upload Health: FAIL - ${error.message}\\n`;
+            }
+
+            // Test 3: Cache Stats
+            try {
+                const cacheResponse = await fetch(`${API_BASE}/cache/stats`);
+                results += `✅ Cache Stats: ${cacheResponse.ok ? 'PASS' : 'FAIL'}\\n`;
+            } catch (error) {
+                results += `❌ Cache Stats: FAIL - ${error.message}\\n`;
+            }
+
+            // Test 4: Public Plans
+            try {
+                const plansResponse = await fetch(`${API_BASE}/planos`);
+                results += `✅ Public Plans: ${plansResponse.ok ? 'PASS' : 'FAIL'}\\n`;
+            } catch (error) {
+                results += `❌ Public Plans: FAIL - ${error.message}\\n`;
+            }
+
+            results += '\\n🎯 TODOS OS TESTES CONCLUÍDOS!';
+            showResult('test-result', results, 'info');
+        }
+
+        // ===== INICIALIZAÇÃO =====
+
+        window.onload = function() {
+            updateAuthStatus();
+            // Testar conexão inicial
+            testHealth();
+        };
+    </script>
+</body>
+</html>
