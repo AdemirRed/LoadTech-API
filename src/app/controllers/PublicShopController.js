@@ -291,6 +291,55 @@ class PublicShopController {
   }
 
   /**
+   * Cadastro de cliente na loja multi-tenant
+   * POST /loja/:slug/cliente/cadastro
+   */
+  async cadastroCliente(req, res) {
+    const client = req.lojaDbClient;
+    const { nome, email, senha } = req.body;
+    if (!nome || !email || !senha) {
+      return res.status(400).json({ erro: 'Nome, e-mail e senha são obrigatórios.' });
+    }
+    try {
+      // Verifica se já existe
+      const existe = await client.query('SELECT 1 FROM clientes WHERE email = $1', [email]);
+      if (existe.rowCount > 0) {
+        return res.status(400).json({ erro: 'E-mail já cadastrado.' });
+      }
+      // Cria cliente
+      await client.query('INSERT INTO clientes (nome, email, senha) VALUES ($1, $2, $3)', [nome, email, senha]);
+      return res.status(201).json({ mensagem: 'Cliente cadastrado com sucesso.' });
+    } catch (error) {
+      return res.status(500).json({ erro: 'Erro ao cadastrar cliente.' });
+    } finally {
+      await client.end();
+    }
+  }
+
+  /**
+   * Login de cliente na loja multi-tenant
+   * POST /loja/:slug/cliente/login
+   */
+  async loginCliente(req, res) {
+    const client = req.lojaDbClient;
+    const { email, senha } = req.body;
+    if (!email || !senha) {
+      return res.status(400).json({ erro: 'E-mail e senha são obrigatórios.' });
+    }
+    try {
+      const result = await client.query('SELECT * FROM clientes WHERE email = $1 AND senha = $2', [email, senha]);
+      if (result.rowCount === 0) {
+        return res.status(401).json({ erro: 'Credenciais inválidas.' });
+      }
+      return res.json({ mensagem: 'Login realizado com sucesso.', cliente: result.rows[0] });
+    } catch (error) {
+      return res.status(500).json({ erro: 'Erro ao realizar login.' });
+    } finally {
+      await client.end();
+    }
+  }
+
+  /**
    * Utilitário para extrair subdomínio
    */
   getSubdomain(host) {

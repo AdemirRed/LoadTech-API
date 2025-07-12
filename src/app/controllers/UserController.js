@@ -56,23 +56,27 @@ class UserController {
       });
 
       // 🔥 SINCRONIZAR AUTOMATICAMENTE COM ASAAS
+      console.log(`🔄 Iniciando sincronização automática com Asaas para ${email}...`);
       try {
         const syncResult = await syncUserWithAsaas(user, {
           phone: telefone,
           mobilePhone: telefone
         });
         
+        console.log(`📊 Resultado da sincronização:`, syncResult);
+        
         if (syncResult.success) {
           if (syncResult.linked) {
-            console.log(`🔗 Usuário ${email} vinculado ao cliente Asaas existente`);
+            console.log(`🔗 Usuário ${email} vinculado ao cliente Asaas existente: ${syncResult.customerId}`);
           } else if (syncResult.created) {
-            console.log(`✅ Cliente Asaas criado automaticamente para ${email}`);
+            console.log(`✅ Cliente Asaas criado automaticamente para ${email}: ${syncResult.customerId}`);
           }
         } else {
           console.warn(`⚠️ Falha na sincronização com Asaas para ${email}:`, syncResult.error);
         }
       } catch (syncError) {
         console.error(`❌ Erro na sincronização automática com Asaas para ${email}:`, syncError);
+        console.error('Stack trace:', syncError.stack);
         // Não interrompe o cadastro, apenas loga o erro
       }
 
@@ -671,39 +675,48 @@ async function syncUserWithAsaas(user, additionalData = {}) {
       return { success: true, linked: true, customerId: existingCustomer.id };
     }
 
-    // Se não existe e temos dados suficientes, criar novo cliente
+    // Criar novo cliente no Asaas (mesmo sem CPF inicialmente)
+    const customerData = {
+      name: user.nome,
+      email: user.email,
+      phone: additionalData.phone || user.telefone,
+      mobilePhone: additionalData.mobilePhone || user.telefone,
+      externalReference: user.id.toString(),
+      ...additionalData
+    };
+
+    // Adicionar CPF se disponível
     if (user.cpf_cnpj || additionalData.cpfCnpj) {
-      const customerData = {
-        name: user.nome,
-        email: user.email,
-        cpfCnpj: user.cpf_cnpj || additionalData.cpfCnpj,
-        phone: additionalData.phone || user.telefone,
-        mobilePhone: additionalData.mobilePhone || user.telefone,
-        externalReference: user.id.toString(),
-        ...additionalData
-      };
+      customerData.cpfCnpj = user.cpf_cnpj || additionalData.cpfCnpj;
+    }
 
-      // Remover campos undefined
-      Object.keys(customerData).forEach(key => {
-        if (customerData[key] === undefined) {
-          delete customerData[key];
-        }
-      });
+    // Remover campos undefined/null/vazios
+    Object.keys(customerData).forEach(key => {
+      if (customerData[key] === undefined || customerData[key] === null || customerData[key] === '') {
+        delete customerData[key];
+      }
+    });
 
+    try {
       const newCustomer = await AsaasClient.createCustomer(customerData);
       
-      await user.update({
-        asaas_customer_id: newCustomer.id,
-        cpf_cnpj: newCustomer.cpfCnpj
-      });
+      const updateData = {
+        asaas_customer_id: newCustomer.id
+      };
+
+      // Atualizar CPF se retornado pelo Asaas
+      if (newCustomer.cpfCnpj && !user.cpf_cnpj) {
+        updateData.cpf_cnpj = newCustomer.cpfCnpj;
+      }
+
+      await user.update(updateData);
 
       console.log(`✅ Novo cliente Asaas criado: ${newCustomer.id} -> ${user.email}`);
       return { success: true, created: true, customerId: newCustomer.id };
+    } catch (createError) {
+      console.error(`❌ Erro ao criar cliente Asaas para ${user.email}:`, createError.message);
+      return { success: false, error: createError.message };
     }
-
-    // Sem dados suficientes para criar cliente
-    console.log(`⚠️ Dados insuficientes para criar cliente Asaas para ${user.email}`);
-    return { success: false, error: 'Dados insuficientes para criar cliente Asaas' };
 
   } catch (error) {
     console.error('Erro na sincronização com Asaas:', error);

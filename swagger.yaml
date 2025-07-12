@@ -1,0 +1,412 @@
+openapi: 3.0.3
+info:
+  title: LoadTech Multi-Tenant API
+  description: API para sistema multi-tenant onde cada loja possui banco de dados isolado
+  version: 1.0.0
+  contact:
+    name: LoadTech Team
+    email: contato@loadtech.com.br
+
+servers:
+  - url: http://localhost:3001
+    description: Servidor de desenvolvimento
+  - url: https://api.loadtech.com.br
+    description: Servidor de produção
+
+paths:
+  /lojas:
+    post:
+      summary: Criar nova loja
+      description: Cria uma nova loja e seu banco de dados exclusivo
+      tags:
+        - Lojas
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CriarLojaRequest'
+      responses:
+        '201':
+          description: Loja criada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LojaResponse'
+        '400':
+          description: Dados inválidos
+        '403':
+          description: Usuário sem assinatura ativa
+        '500':
+          description: Erro interno do servidor
+
+  /loja/{slug}:
+    get:
+      summary: Obter dados da loja
+      description: Retorna informações públicas da loja
+      tags:
+        - Loja Pública
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Slug único da loja
+      responses:
+        '200':
+          description: Dados da loja
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LojaDadosPublicos'
+        '404':
+          description: Loja não encontrada
+
+  /loja/{slug}/cliente/cadastro:
+    post:
+      summary: Cadastrar cliente na loja
+      description: Registra um novo cliente no banco exclusivo da loja
+      tags:
+        - Clientes Multi-Tenant
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Slug único da loja
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CadastroClienteRequest'
+      responses:
+        '201':
+          description: Cliente cadastrado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensagem:
+                    type: string
+                    example: "Cliente cadastrado com sucesso."
+        '400':
+          description: Dados inválidos ou e-mail já cadastrado
+        '404':
+          description: Loja não encontrada
+        '500':
+          description: Erro interno do servidor
+
+  /loja/{slug}/cliente/login:
+    post:
+      summary: Login de cliente na loja
+      description: Autentica cliente no banco exclusivo da loja
+      tags:
+        - Clientes Multi-Tenant
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Slug único da loja
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginClienteRequest'
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginClienteResponse'
+        '401':
+          description: Credenciais inválidas
+        '404':
+          description: Loja não encontrada
+        '500':
+          description: Erro interno do servidor
+
+  /teste:
+    get:
+      summary: Rota de teste da API
+      description: Endpoint simples para testar se a API está funcionando
+      tags:
+        - Teste
+      responses:
+        '200':
+          description: API funcionando corretamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  mensagem:
+                    type: string
+                    example: "LoadTech Multi-Tenant API funcionando!"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-07-12T10:30:00Z"
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /loja/{slug}/teste:
+    get:
+      summary: Testar conexão com banco da loja
+      description: Verifica se o banco exclusivo da loja está acessível
+      tags:
+        - Teste
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Slug único da loja
+          example: "francieli"
+      responses:
+        '200':
+          description: Banco da loja acessível
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  loja:
+                    type: string
+                    example: "francieli"
+                  banco:
+                    type: string
+                    example: "loja_francieli"
+                  mensagem:
+                    type: string
+                    example: "Banco da loja conectado com sucesso"
+        '404':
+          description: Loja não encontrada
+        '500':
+          description: Erro de conexão com banco da loja
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CriarLojaRequest:
+      type: object
+      required:
+        - nome_loja
+      properties:
+        nome_loja:
+          type: string
+          minLength: 2
+          description: Nome da loja
+          example: "Loja da Francieli"
+        descricao:
+          type: string
+          description: Descrição da loja
+          example: "Roupas femininas modernas"
+        telefone_loja:
+          type: string
+          description: Telefone da loja
+          example: "(11) 99999-9999"
+        email_loja:
+          type: string
+          format: email
+          description: E-mail da loja
+          example: "contato@francieli.com.br"
+        whatsapp:
+          type: string
+          description: WhatsApp da loja
+          example: "5511999999999"
+        endereco:
+          type: object
+          properties:
+            cep:
+              type: string
+              example: "01310-100"
+            logradouro:
+              type: string
+              example: "Av. Paulista"
+            numero:
+              type: string
+              example: "1000"
+            complemento:
+              type: string
+              example: "Sala 10"
+            bairro:
+              type: string
+              example: "Bela Vista"
+            cidade:
+              type: string
+              example: "São Paulo"
+            estado:
+              type: string
+              example: "SP"
+            pais:
+              type: string
+              default: "Brasil"
+        redes_sociais:
+          type: object
+          properties:
+            instagram:
+              type: string
+              format: uri
+              example: "https://instagram.com/francieli"
+            facebook:
+              type: string
+              format: uri
+            twitter:
+              type: string
+              format: uri
+            youtube:
+              type: string
+              format: uri
+        tema_cor_primaria:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+          default: "#007bff"
+          example: "#ff6b6b"
+        tema_cor_secundaria:
+          type: string
+          pattern: "^#[0-9A-Fa-f]{6}$"
+          default: "#6c757d"
+          example: "#4ecdc4"
+
+    LojaResponse:
+      type: object
+      properties:
+        mensagem:
+          type: string
+          example: "Loja criada com sucesso."
+        loja:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 123
+            nome_loja:
+              type: string
+              example: "Loja da Francieli"
+            slug:
+              type: string
+              example: "francieli"
+            url:
+              type: string
+              example: "https://loadtech.com.br/loja/francieli"
+            status:
+              type: string
+              example: "ativa"
+
+    LojaDadosPublicos:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            nome_loja:
+              type: string
+              example: "Loja da Francieli"
+            slug:
+              type: string
+              example: "francieli"
+            descricao:
+              type: string
+              example: "Roupas femininas modernas"
+            telefone_loja:
+              type: string
+              example: "(11) 99999-9999"
+            email_loja:
+              type: string
+              example: "contato@francieli.com.br"
+            url_base:
+              type: string
+              example: "https://loadtech.com.br/loja/francieli"
+
+    CadastroClienteRequest:
+      type: object
+      required:
+        - nome
+        - email
+        - senha
+      properties:
+        nome:
+          type: string
+          description: Nome completo do cliente
+          example: "Ademir Silva"
+        email:
+          type: string
+          format: email
+          description: E-mail do cliente
+          example: "ademir@email.com"
+        senha:
+          type: string
+          minLength: 6
+          description: Senha do cliente
+          example: "minhasenha123"
+
+    LoginClienteRequest:
+      type: object
+      required:
+        - email
+        - senha
+      properties:
+        email:
+          type: string
+          format: email
+          description: E-mail do cliente
+          example: "ademir@email.com"
+        senha:
+          type: string
+          description: Senha do cliente
+          example: "minhasenha123"
+
+    LoginClienteResponse:
+      type: object
+      properties:
+        mensagem:
+          type: string
+          example: "Login realizado com sucesso."
+        cliente:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 456
+            nome:
+              type: string
+              example: "Ademir Silva"
+            email:
+              type: string
+              example: "ademir@email.com"
+
+tags:
+  - name: Teste
+    description: Endpoints para testar funcionamento da API
+  - name: Lojas
+    description: Operações relacionadas ao cadastro de lojas
+  - name: Loja Pública
+    description: Acesso público aos dados da loja
+  - name: Clientes Multi-Tenant
+    description: Cadastro e autenticação de clientes no banco exclusivo da loja

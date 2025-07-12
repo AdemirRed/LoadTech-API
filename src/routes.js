@@ -1,5 +1,8 @@
 import { Router } from 'express';
 
+// Models
+import User from './app/models/User.js';
+
 // Controllers
 import UserController from './app/controllers/UserController.js';
 import AuthController from './app/controllers/AuthController.js';
@@ -24,6 +27,7 @@ import {
   handleUploadError 
 } from './app/middlewares/uploadMiddleware.js';
 import { decryptMiddleware, cryptoMiddleware } from './app/middlewares/cryptoMiddleware.js';
+import { lojaDbMiddleware } from './app/middlewares/lojaDbMiddleware.js';
 
 const routes = new Router();
 
@@ -106,6 +110,91 @@ routes.get('/uploads/health', (req, res) => {
 // Cache stats (público para desenvolvimento)
 routes.get('/cache/stats', CacheController.stats);
 
+// ===== SINCRONIZAÇÃO ASAAS (Após verificação de email) - PÚBLICO =====
+routes.post('/sync-asaas', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ erro: 'Email é obrigatório' });
+    }
+
+    // Buscar usuário
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ erro: 'Usuário não encontrado' });
+    }
+
+    // Verificar se email foi verificado
+    if (!user.email_verificado) {
+      return res.status(400).json({ erro: 'Email ainda não foi verificado' });
+    }
+
+    // Verificar se já tem Asaas Customer ID
+    if (user.asaas_customer_id) {
+      return res.status(200).json({ 
+        mensagem: 'Cliente já está sincronizado com Asaas',
+        usuario: {
+          id: user.id,
+          email: user.email,
+          asaas_customer_id: user.asaas_customer_id
+        }
+      });
+    }
+
+    console.log(`🔄 Sincronizando ${email} com Asaas após verificação...`);
+
+    // Importar função de sincronização
+    const { syncUserWithAsaas } = await import('./app/controllers/UserController.js');
+    
+    // Executar sincronização
+    const syncResult = await syncUserWithAsaas(user, {
+      phone: user.telefone,
+      mobilePhone: user.telefone
+    });
+
+    console.log(`📊 Resultado sync para ${email}:`, syncResult);
+
+    // Recarregar usuário para pegar dados atualizados
+    await user.reload();
+
+    if (syncResult.success) {
+      return res.status(200).json({
+        mensagem: 'Cliente sincronizado com Asaas com sucesso!',
+        usuario: {
+          id: user.id,
+          email: user.email,
+          nome: user.nome,
+          asaas_customer_id: user.asaas_customer_id,
+          cpf_cnpj: user.cpf_cnpj
+        },
+        asaas: {
+          customer_id: syncResult.customerId,
+          action: syncResult.created ? 'created' : 'linked',
+          message: syncResult.created ? 'Novo cliente criado no Asaas' : 'Cliente existente vinculado'
+        }
+      });
+    } else {
+      return res.status(500).json({
+        erro: 'Falha na sincronização com Asaas',
+        detalhes: syncResult.error,
+        usuario: {
+          id: user.id,
+          email: user.email,
+          asaas_customer_id: user.asaas_customer_id
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erro na rota sync-asaas:', error);
+    return res.status(500).json({ 
+      erro: 'Erro interno do servidor',
+      detalhes: error.message 
+    });
+  }
+});
+
 // ===== MIDDLEWARE DE AUTENTICAÇÃO =====
 routes.use(authMiddleware);
 
@@ -125,7 +214,9 @@ routes.put('/assinaturas/:id/reativar', AssinaturaController.reactivate);
 
 // Loja
 routes.get('/minha-loja', LojaController.show);
+routes.get('/minhas-lojas', LojaController.index); // Listar lojas do usuário
 routes.post('/loja', LojaController.store);
+routes.post('/lojas', LojaController.store); // Endpoint alternativo documentado
 routes.put('/loja', LojaController.update);
 routes.put('/loja/tema', LojaController.updateTheme);
 routes.put('/loja/seo', LojaController.updateSEO);
@@ -302,5 +393,167 @@ routes.post('/payment/customer/restore', PaymentController.restoreAsaasCustomer)
 // Sincronização com Asaas
 routes.post('/admin/sync/asaas-orphans', UserController.syncAsaasOrphans);
 routes.post('/admin/sync/asaas-customers', PaymentController.syncCustomersFromAsaas);
+
+// Rota para sincronizar via token JWT (após login)
+routes.post('/sync-asaas-auth', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.userId);
+    
+    if (!user) {
+      return res.status(404).json({ erro: 'Usuário não encontrado' });
+    }
+
+    // Verificar se email foi verificado
+    if (!user.email_verificado) {
+      return res.status(400).json({ erro: 'Email ainda não foi verificado' });
+    }
+
+    // Verificar se já tem Asaas Customer ID
+    if (user.asaas_customer_id) {
+      return res.status(200).json({ 
+        mensagem: 'Cliente já está sincronizado com Asaas',
+        usuario: {
+          id: user.id,
+          email: user.email,
+          asaas_customer_id: user.asaas_customer_id
+        }
+      });
+    }
+
+    console.log(`🔄 Sincronizando ${user.email} com Asaas (via token)...`);
+
+    // Importar função de sincronização
+    const { syncUserWithAsaas } = await import('./app/controllers/UserController.js');
+    
+    // Executar sincronização
+    const syncResult = await syncUserWithAsaas(user, {
+      phone: user.telefone,
+      mobilePhone: user.telefone
+    });
+
+    console.log(`📊 Resultado sync para ${user.email}:`, syncResult);
+
+    // Recarregar usuário
+    await user.reload();
+
+    if (syncResult.success) {
+      return res.status(200).json({
+        mensagem: 'Cliente sincronizado com Asaas com sucesso!',
+        usuario: {
+          id: user.id,
+          email: user.email,
+          nome: user.nome,
+          asaas_customer_id: user.asaas_customer_id,
+          cpf_cnpj: user.cpf_cnpj
+        },
+        asaas: {
+          customer_id: syncResult.customerId,
+          action: syncResult.created ? 'created' : 'linked',
+          message: syncResult.created ? 'Novo cliente criado no Asaas' : 'Cliente existente vinculado'
+        }
+      });
+    } else {
+      return res.status(500).json({
+        erro: 'Falha na sincronização com Asaas',
+        detalhes: syncResult.error,
+        usuario: {
+          id: user.id,
+          email: user.email,
+          asaas_customer_id: user.asaas_customer_id
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erro na rota sync-asaas-auth:', error);
+    return res.status(500).json({ 
+      erro: 'Erro interno do servidor',
+      detalhes: error.message 
+    });
+  }
+});
+
+// ===== ROTAS DE TESTE =====
+routes.get('/teste', (req, res) => {
+  return res.json({
+    status: 'ok',
+    mensagem: 'LoadTech Multi-Tenant API funcionando!',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
+routes.get('/loja/:slug/teste', lojaDbMiddleware, async (req, res) => {
+  const client = req.lojaDbClient;
+  try {
+    // Testa uma query simples no banco da loja
+    await client.query('SELECT 1');
+    return res.json({
+      status: 'ok',
+      loja: req.params.slug,
+      banco: `loja_${req.params.slug.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()}`,
+      mensagem: 'Banco da loja conectado com sucesso'
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 'error',
+      mensagem: 'Erro ao conectar com banco da loja'
+    });
+  } finally {
+    await client.end();
+  }
+});
+
+// ===== ROTAS PÚBLICAS MULTI-TENANT =====
+routes.get('/loja/:slug', lojaDbMiddleware, (req, res) => PublicShopController.getLojaData(req, res));
+routes.post('/loja/:slug/cliente/cadastro', lojaDbMiddleware, (req, res) => PublicShopController.cadastroCliente(req, res));
+routes.post('/loja/:slug/cliente/login', lojaDbMiddleware, (req, res) => PublicShopController.loginCliente(req, res));
+
+// Rota de teste para debug (temporária)
+routes.post('/test-loja', (req, res) => {
+  console.log('Teste de criação de loja - Body:', JSON.stringify(req.body, null, 2));
+  console.log('Headers:', req.headers);
+  return res.json({ 
+    success: true, 
+    body: req.body,
+    message: 'Dados recebidos com sucesso' 
+  });
+});
+
+// ===== ROTAS DE DEBUG/TESTE (Remover em produção) =====
+routes.get('/test-sync-asaas/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { syncUserWithAsaas } = await import('./app/controllers/UserController.js');
+    const User = await import('./app/models/User.js');
+    
+    const user = await User.default.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ erro: 'Usuário não encontrado' });
+    }
+
+    console.log(`🧪 Teste manual de sincronização para: ${user.email}`);
+    
+    const result = await syncUserWithAsaas(user, {
+      phone: user.telefone,
+      mobilePhone: user.telefone
+    });
+
+    await user.reload();
+
+    return res.json({
+      mensagem: 'Teste de sincronização executado',
+      user: {
+        id: user.id,
+        email: user.email,
+        asaas_customer_id: user.asaas_customer_id
+      },
+      sync_result: result
+    });
+  } catch (error) {
+    console.error('Erro no teste sync:', error);
+    return res.status(500).json({ erro: error.message });
+  }
+});
 
 export default routes;

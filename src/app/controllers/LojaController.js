@@ -1,11 +1,34 @@
 import * as Yup from 'yup';
 import Loja from '../models/Loja.js';
 import User from '../models/User.js';
+import { createLojaDatabase } from '../../utils/createLojaDatabase.js';
 
 class LojaController {
   // Criar nova loja
   async store(req, res) {
     try {
+      // Debug: log do body recebido
+      console.log('Body recebido:', JSON.stringify(req.body, null, 2));
+      console.log('Chaves do body:', Object.keys(req.body));
+      console.log('nome_loja:', req.body.nome_loja);
+      console.log('Tipo de nome_loja:', typeof req.body.nome_loja);
+
+      // Normalizar dados - aceitar tanto 'nome' quanto 'nome_loja'
+      const dadosNormalizados = {
+        ...req.body,
+        nome_loja: req.body.nome_loja || req.body.nome,
+        telefone_loja: req.body.telefone_loja || req.body.telefone,
+        email_loja: req.body.email_loja || req.body.email,
+      };
+
+      console.log('Dados normalizados:', JSON.stringify(dadosNormalizados, null, 2));
+      console.log('nome_loja após normalização:', dadosNormalizados.nome_loja);
+
+      // Validação básica manual antes do Yup
+      if (!dadosNormalizados.nome_loja || dadosNormalizados.nome_loja.trim() === '') {
+        return res.status(400).json({ erro: 'Nome da loja é obrigatório' });
+      }
+
       const schema = Yup.object().shape({
         nome_loja: Yup.string().required('Nome da loja é obrigatório').min(2, 'Nome deve ter pelo menos 2 caracteres'),
         descricao: Yup.string().nullable(),
@@ -32,7 +55,7 @@ class LojaController {
         tema_cor_secundaria: Yup.string().matches(/^#[0-9A-Fa-f]{6}$/, 'Cor secundária deve ser um hex válido').default('#6c757d'),
       });
 
-      const dadosValidados = await schema.validate(req.body);
+      const dadosValidados = await schema.validate(dadosNormalizados);
 
       // Verificar se usuário pode criar loja
       const user = await User.findByPk(req.user.id);
@@ -50,6 +73,12 @@ class LojaController {
 
       // Gerar slug único
       const slug = await Loja.gerarSlugUnico(dadosValidados.nome_loja);
+
+      // Criar banco exclusivo para a loja
+      const dbCriado = await createLojaDatabase(slug);
+      if (!dbCriado) {
+        return res.status(500).json({ erro: 'Não foi possível criar o banco de dados exclusivo da loja.' });
+      }
 
       const loja = await Loja.create({
         ...dadosValidados,
@@ -354,6 +383,36 @@ class LojaController {
       });
     } catch (error) {
       console.error('Erro ao listar todas as lojas:', error);
+      return res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+  }
+
+  // Listar lojas do usuário
+  async index(req, res) {
+    try {
+      const lojas = await Loja.findAll({
+        where: { user_id: req.user.id },
+        include: [
+          {
+            association: 'proprietario',
+            attributes: ['id', 'nome', 'email'],
+          },
+        ],
+        order: [['created_at', 'DESC']],
+      });
+
+      const lojasFormatadas = lojas.map(loja => ({
+        ...loja.toJSON(),
+        url_publica: loja.getUrl(),
+      }));
+
+      return res.json({
+        lojas: lojasFormatadas,
+        total: lojas.length,
+        mensagem: lojas.length === 0 ? 'Você ainda não possui lojas cadastradas.' : undefined,
+      });
+    } catch (error) {
+      console.error('Erro ao listar lojas:', error);
       return res.status(500).json({ erro: 'Erro interno do servidor.' });
     }
   }

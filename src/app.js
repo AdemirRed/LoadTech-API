@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import './database/index.js';
 import { connectRedis } from './config/redis.js';
+import { setupSwagger } from './config/swagger.js';
 import routes from './routes.js';
 import { cryptoMiddleware, decryptMiddleware } from './app/middlewares/cryptoMiddleware.js';
 
@@ -17,7 +18,15 @@ class App {
     this.initRedis();
     this.createUploadFolders();
     this.middleware();
+    this.setupSwagger();
     this.routes();
+  }
+
+  /**
+   * Configura Swagger UI
+   */
+  setupSwagger() {
+    setupSwagger(this.app);
   }
 
   /**
@@ -68,6 +77,31 @@ class App {
   }
 
   middleware() {
+    // CORS simples e eficaz
+    this.app.use((req, res, next) => {
+      const origin = req.headers.origin;
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:3000'
+      ];
+      
+      if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
+      
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Accept-Crypto,X-Session-Id');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      
+      if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+      }
+      
+      next();
+    });
+
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
 
@@ -83,13 +117,6 @@ class App {
     // Servir arquivos estáticos da raiz (HTML, CSS, JS)
     this.app.use(express.static(path.join(__dirname, '../')));
     this.app.use(express.static(path.join(__dirname, '../public')));
-
-    this.app.use(cors({
-      origin: true, // Permite todas as origens em desenvolvimento
-      credentials: true, // Permite envio de cookies e headers Authorization
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Accept-Crypto', 'X-Session-Id'],
-    }));
 
     // Middleware de criptografia (depois do CORS, antes das rotas)
     this.app.use(cryptoMiddleware({
