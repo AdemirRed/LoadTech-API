@@ -221,7 +221,7 @@ class Loja extends Model {
     await this.save();
   }
 
-  // Método para obter dados para exibição pública
+  // Método para obter dados para exibição pública (SEGURO)
   getDadosPublicos() {
     return {
       nome_loja: this.nome_loja,
@@ -231,13 +231,67 @@ class Loja extends Model {
       banner_url: this.banner_url,
       tema_cor_primaria: this.tema_cor_primaria,
       tema_cor_secundaria: this.tema_cor_secundaria,
+      // Dados de contato apenas se explicitamente definidos para a loja
       telefone_loja: this.telefone_loja,
       email_loja: this.email_loja,
       whatsapp: this.whatsapp,
-      redes_sociais: this.redes_sociais,
+      // Redes sociais filtradas (apenas campos conhecidos e seguros)
+      redes_sociais: this.redes_sociais ? {
+        instagram: this.redes_sociais.instagram,
+        facebook: this.redes_sociais.facebook,
+        twitter: this.redes_sociais.twitter,
+        linkedin: this.redes_sociais.linkedin,
+        youtube: this.redes_sociais.youtube,
+        tiktok: this.redes_sociais.tiktok
+        // Não expor campos desconhecidos ou personalizados
+      } : null,
       seo_titulo: this.seo_titulo,
       seo_descricao: this.seo_descricao,
-      endereco: this.endereco,
+      // Endereço filtrado (apenas dados comerciais)
+      endereco: this.endereco ? {
+        cidade: this.endereco.cidade,
+        estado: this.endereco.estado,
+        pais: this.endereco.pais || 'Brasil'
+        // Removido: logradouro, numero, cep, complemento
+      } : null,
+    };
+  }
+
+  // Método para obter dados básicos (ainda mais restrito)
+  getDadosBasicos() {
+    return {
+      nome_loja: this.nome_loja,
+      descricao: this.descricao,
+      slug: this.slug,
+      logo_url: this.logo_url,
+      tema_cor_primaria: this.tema_cor_primaria,
+      tema_cor_secundaria: this.tema_cor_secundaria,
+      seo_titulo: this.seo_titulo,
+      seo_descricao: this.seo_descricao,
+    };
+  }
+
+  // Método para obter dados de contato (separado)
+  getDadosContato() {
+    return {
+      nome_loja: this.nome_loja,
+      telefone_loja: this.telefone_loja,
+      email_loja: this.email_loja,
+      whatsapp: this.whatsapp,
+      // Redes sociais filtradas para contato
+      redes_sociais: this.redes_sociais ? {
+        instagram: this.redes_sociais.instagram,
+        facebook: this.redes_sociais.facebook,
+        twitter: this.redes_sociais.twitter,
+        linkedin: this.redes_sociais.linkedin,
+        youtube: this.redes_sociais.youtube,
+        tiktok: this.redes_sociais.tiktok
+      } : null,
+      endereco: this.endereco ? {
+        cidade: this.endereco.cidade,
+        estado: this.endereco.estado,
+        pais: this.endereco.pais || 'Brasil'
+      } : null,
     };
   }
 }

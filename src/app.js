@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import './database/index.js';
 import { connectRedis } from './config/redis.js';
 import routes from './routes.js';
+import { cryptoMiddleware, decryptMiddleware } from './app/middlewares/cryptoMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,6 +71,12 @@ class App {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
 
+    // Middleware de descriptografia (antes das rotas)
+    this.app.use(decryptMiddleware({
+      enabled: process.env.CRYPTO_ENABLED === 'true',
+      debug: process.env.NODE_ENV === 'development'
+    }));
+
     // Servir arquivos estáticos da pasta public
     this.app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
     
@@ -81,7 +88,14 @@ class App {
       origin: true, // Permite todas as origens em desenvolvimento
       credentials: true, // Permite envio de cookies e headers Authorization
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Accept-Crypto', 'X-Session-Id'],
+    }));
+
+    // Middleware de criptografia (depois do CORS, antes das rotas)
+    this.app.use(cryptoMiddleware({
+      enabled: process.env.CRYPTO_ENABLED === 'true',
+      excludePaths: ['/health', '/uploads'],
+      debug: process.env.NODE_ENV === 'development'
     }));
   }
 

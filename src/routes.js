@@ -6,6 +6,7 @@ import AuthController from './app/controllers/AuthController.js';
 import PlanoController from './app/controllers/PlanoController.js';
 import AssinaturaController from './app/controllers/AssinaturaController.js';
 import LojaController from './app/controllers/LojaController.js';
+import PublicShopController from './app/controllers/PublicShopController.js'; // REATIVANDO
 import UploadController from './app/controllers/UploadController.js';
 import CacheController from './app/controllers/CacheController.js';
 import PaymentController from './app/controllers/PaymentController.js';
@@ -22,6 +23,7 @@ import {
   validateUpload, 
   handleUploadError 
 } from './app/middlewares/uploadMiddleware.js';
+import { decryptMiddleware, cryptoMiddleware } from './app/middlewares/cryptoMiddleware.js';
 
 const routes = new Router();
 
@@ -47,7 +49,16 @@ routes.get('/planos', cacheMiddleware(600), PlanoController.index);
 routes.get('/planos/comparar', cacheMiddleware(300), PlanoController.compare);
 routes.get('/planos/:id', cacheMiddleware(600), PlanoController.show);
 
-// Loja pública
+// APIs Públicas de Loja (para frontend)
+routes.get('/api/loja/:slug', cacheMiddleware(300), (req, res) => PublicShopController.getLojaData(req, res));
+routes.get('/api/loja/:slug/verificar', (req, res) => PublicShopController.verificarLoja(req, res));
+routes.get('/api/loja/:slug/contato', cacheMiddleware(300), (req, res) => PublicShopController.getContato(req, res));
+routes.get('/api/detectar-loja', (req, res) => PublicShopController.detectarLoja(req, res));
+
+// Redirects para lojas
+routes.get('/ir/:slug', (req, res) => PublicShopController.redirectToShop(req, res));
+
+// Loja pública (compatibilidade - retorna JSON)
 routes.get('/loja/:slug', cacheMiddleware(300), LojaController.showBySlug);
 
 // Health checks
