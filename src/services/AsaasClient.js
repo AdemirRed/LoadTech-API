@@ -109,6 +109,108 @@ class AsaasClient {
     return this.listCustomers(filters);
   }
 
+  // ===== GERENCIAMENTO DE CLIENTES =====
+
+  /**
+   * Listar todos os clientes do Asaas
+   */
+  async listCustomers(filters = {}) {
+    const queryParams = new URLSearchParams();
+    
+    // Adiciona filtros se fornecidos
+    if (filters.name) queryParams.append('name', filters.name);
+    if (filters.email) queryParams.append('email', filters.email);
+    if (filters.cpfCnpj) queryParams.append('cpfCnpj', filters.cpfCnpj);
+    if (filters.groupName) queryParams.append('groupName', filters.groupName);
+    if (filters.externalReference) queryParams.append('externalReference', filters.externalReference);
+    if (filters.offset) queryParams.append('offset', filters.offset);
+    if (filters.limit) queryParams.append('limit', filters.limit);
+
+    const endpoint = `/customers${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    return await this.makeRequest(endpoint, {
+      method: 'GET'
+    });
+  }
+
+  /**
+   * Buscar cliente específico por ID
+   */
+  async getCustomerById(customerId) {
+    if (!customerId) {
+      throw new Error('ID do cliente é obrigatório');
+    }
+
+    return await this.makeRequest(`/customers/${customerId}`, {
+      method: 'GET'
+    });
+  }
+
+  /**
+   * Buscar clientes por email, CPF ou nome (para sincronização)
+   */
+  async findCustomerByIdentifier(identifier) {
+    // Tenta buscar por email primeiro
+    let customers = await this.listCustomers({ email: identifier });
+    if (customers.data && customers.data.length > 0) {
+      return customers.data[0];
+    }
+
+    // Se não encontrou por email, tenta por CPF
+    customers = await this.listCustomers({ cpfCnpj: identifier });
+    if (customers.data && customers.data.length > 0) {
+      return customers.data[0];
+    }
+
+    // Se não encontrou por CPF, tenta por nome
+    customers = await this.listCustomers({ name: identifier });
+    if (customers.data && customers.data.length > 0) {
+      return customers.data[0];
+    }
+
+    return null;
+  }
+
+  /**
+   * Atualizar cliente existente
+   */
+  async updateCustomer(customerId, customerData) {
+    if (!customerId) {
+      throw new Error('ID do cliente é obrigatório');
+    }
+
+    return await this.makeRequest(`/customers/${customerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(customerData)
+    });
+  }
+
+  /**
+   * Remover cliente
+   */
+  async deleteCustomer(customerId) {
+    if (!customerId) {
+      throw new Error('ID do cliente é obrigatório');
+    }
+
+    return await this.makeRequest(`/customers/${customerId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  /**
+   * Restaurar cliente removido
+   */
+  async restoreCustomer(customerId) {
+    if (!customerId) {
+      throw new Error('ID do cliente é obrigatório');
+    }
+
+    return await this.makeRequest(`/customers/${customerId}/restore`, {
+      method: 'POST'
+    });
+  }
+
   // ===== ASSINATURAS =====
 
   /**

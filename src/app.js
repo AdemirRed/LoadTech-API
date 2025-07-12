@@ -72,6 +72,10 @@ class App {
 
     // Servir arquivos estáticos da pasta public
     this.app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+    
+    // Servir arquivos estáticos da raiz (HTML, CSS, JS)
+    this.app.use(express.static(path.join(__dirname, '../')));
+    this.app.use(express.static(path.join(__dirname, '../public')));
 
     this.app.use(cors({
       origin: true, // Permite todas as origens em desenvolvimento

@@ -353,7 +353,7 @@ Equipe LoadTech - Suporte ao Cliente`,
 
                 <div style="background: linear-gradient(135deg, #ffc107, #fd7e14); padding: 25px; border-radius: 10px; text-align: center; margin: 30px 0;">
                   <p style="color: white; margin: 0 0 10px 0; font-size: 14px; opacity: 0.9;">Novo Código de Verificação</p>
-                  <div style="font-size: 32px; font-weight: bold; color: white; letter-spacing: 4px; font-family: 'Courier New', monospace;">
+                  <div style="font-size: 32px; font-weight: bold, color: white, letter-spacing: 4px, font-family: 'Courier New', monospace;">
                     ${codigoVerificacao}
                   </div>
                   <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0 0; font-size: 12px;">Válido por 30 minutos</p>
@@ -646,85 +646,67 @@ Equipe LoadTech - Suporte ao Cliente`,
 }
 
 /**
- * Helper para sincronizar usuário com Asaas
+ * Função utilitária para sincronizar usuário com Asaas automaticamente
+ * Busca cliente existente ou cria novo se necessário
  */
 async function syncUserWithAsaas(user, additionalData = {}) {
   try {
-    // Se já tem customer_id, não precisa criar novamente
+    // Verificar se usuário já tem cliente Asaas
     if (user.asaas_customer_id) {
-      return { success: true, customerId: user.asaas_customer_id };
+      console.log(`👤 Usuário ${user.email} já possui cliente Asaas: ${user.asaas_customer_id}`);
+      return { success: true, linked: true, customerId: user.asaas_customer_id };
     }
 
-    // Buscar se já existe um cliente no Asaas com o mesmo email
-    let existingCustomer = null;
-    try {
-      const customers = await AsaasClient.getCustomers({ email: user.email });
-      if (customers.data && customers.data.length > 0) {
-        existingCustomer = customers.data[0];
-      }
-    } catch (error) {
-      console.log('Erro ao buscar cliente existente no Asaas:', error.message);
-    }
-
+    // Buscar cliente existente no Asaas por email, CPF ou nome
+    const existingCustomer = await AsaasClient.findCustomerByIdentifier(user.email);
+    
     if (existingCustomer) {
       // Cliente já existe no Asaas, apenas vincular
-      user.asaas_customer_id = existingCustomer.id;
-      if (existingCustomer.cpfCnpj) {
-        user.cpf_cnpj = existingCustomer.cpfCnpj;
-      }
-      await user.save();
+      await user.update({
+        asaas_customer_id: existingCustomer.id,
+        cpf_cnpj: existingCustomer.cpfCnpj
+      });
       
-      console.log(`✅ Usuário ${user.email} vinculado ao cliente Asaas existente: ${existingCustomer.id}`);
-      return { success: true, customerId: existingCustomer.id, linked: true };
+      console.log(`🔗 Cliente Asaas existente vinculado: ${existingCustomer.id} -> ${user.email}`);
+      return { success: true, linked: true, customerId: existingCustomer.id };
     }
 
-    // Validar e formatar telefone para o Asaas
-    const formatPhone = (phone) => {
-      if (!phone) return '';
-      // Remove todos os caracteres não numéricos
-      const cleaned = phone.replace(/\D/g, '');
-      // Verifica se tem o formato brasileiro válido
-      if (cleaned.length === 10 || cleaned.length === 11) {
-        return cleaned;
-      }
-      return '';
-    };
+    // Se não existe e temos dados suficientes, criar novo cliente
+    if (user.cpf_cnpj || additionalData.cpfCnpj) {
+      const customerData = {
+        name: user.nome,
+        email: user.email,
+        cpfCnpj: user.cpf_cnpj || additionalData.cpfCnpj,
+        phone: additionalData.phone || user.telefone,
+        mobilePhone: additionalData.mobilePhone || user.telefone,
+        externalReference: user.id.toString(),
+        ...additionalData
+      };
 
-    const formattedPhone = formatPhone(additionalData.phone || user.telefone);
-    
-    // Criar novo cliente no Asaas
-    const customerData = {
-      name: user.nome,
-      email: user.email,
-      externalReference: user.id.toString(),
-      ...additionalData.address // postalCode, address, addressNumber, complement, province, city, state
-    };
+      // Remover campos undefined
+      Object.keys(customerData).forEach(key => {
+        if (customerData[key] === undefined) {
+          delete customerData[key];
+        }
+      });
 
-    // Adicionar telefone apenas se válido
-    if (formattedPhone) {
-      customerData.phone = formattedPhone;
-      customerData.mobilePhone = formattedPhone;
+      const newCustomer = await AsaasClient.createCustomer(customerData);
+      
+      await user.update({
+        asaas_customer_id: newCustomer.id,
+        cpf_cnpj: newCustomer.cpfCnpj
+      });
+
+      console.log(`✅ Novo cliente Asaas criado: ${newCustomer.id} -> ${user.email}`);
+      return { success: true, created: true, customerId: newCustomer.id };
     }
 
-    // Adicionar CPF apenas se fornecido
-    if (additionalData.cpfCnpj || user.cpf_cnpj) {
-      customerData.cpfCnpj = additionalData.cpfCnpj || user.cpf_cnpj;
-    }
-
-    const asaasCustomer = await AsaasClient.createCustomer(customerData);
-
-    // Salvar ID do cliente Asaas no usuário
-    user.asaas_customer_id = asaasCustomer.id;
-    if (asaasCustomer.cpfCnpj) {
-      user.cpf_cnpj = asaasCustomer.cpfCnpj;
-    }
-    await user.save();
-
-    console.log(`✅ Cliente Asaas criado para usuário ${user.email}: ${asaasCustomer.id}`);
-    return { success: true, customerId: asaasCustomer.id, created: true };
+    // Sem dados suficientes para criar cliente
+    console.log(`⚠️ Dados insuficientes para criar cliente Asaas para ${user.email}`);
+    return { success: false, error: 'Dados insuficientes para criar cliente Asaas' };
 
   } catch (error) {
-    console.error(`❌ Erro ao sincronizar usuário ${user.email} com Asaas:`, error);
+    console.error('Erro na sincronização com Asaas:', error);
     return { success: false, error: error.message };
   }
 }

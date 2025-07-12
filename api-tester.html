@@ -915,6 +915,115 @@
                     <div id="test-result"></div>
                 </div>
             </div>
+
+            <!-- Seção de Gerenciamento de Clientes Asaas -->
+            <div class="section">
+                <div class="section-header">
+                    👤 Gerenciamento de Clientes Asaas
+                </div>
+                <div class="section-content">
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('cliente-sync-tab', this)">Sincronizar</button>
+                        <button class="tab" onclick="showTab('cliente-manage-tab', this)">Gerenciar</button>
+                        <button class="tab" onclick="showTab('cliente-admin-tab', this)">Admin</button>
+                    </div>
+
+                    <!-- Sincronizar Dados -->
+                    <div id="cliente-sync-tab" class="tab-content active">
+                        <p>🔄 Sincronize seus dados com o sistema de pagamento Asaas</p>
+                        <button class="btn btn-info" onclick="syncAsaasCustomer()">🔄 Sincronizar Dados</button>
+                        <button class="btn btn-success" onclick="getMyAsaasCustomer()">👤 Ver Meus Dados</button>
+                        
+                        <div id="cliente-sync-result"></div>
+                    </div>
+
+                    <!-- Gerenciar Cliente -->
+                    <div id="cliente-manage-tab" class="tab-content">
+                        <h4>✏️ Atualizar Dados do Cliente:</h4>
+                        
+                        <div class="form-group">
+                            <label for="update-customer-phone">Telefone:</label>
+                            <input type="text" id="update-customer-phone" placeholder="11987654321">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-customer-mobile">Celular:</label>
+                            <input type="text" id="update-customer-mobile" placeholder="11987654321">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-customer-address">Endereço:</label>
+                            <input type="text" id="update-customer-address" placeholder="Av. Paulista">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-customer-number">Número:</label>
+                            <input type="text" id="update-customer-number" placeholder="150">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-customer-complement">Complemento:</label>
+                            <input type="text" id="update-customer-complement" placeholder="Sala 201">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-customer-province">Bairro:</label>
+                            <input type="text" id="update-customer-province" placeholder="Centro">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-customer-postal">CEP:</label>
+                            <input type="text" id="update-customer-postal" placeholder="01310-000">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="update-customer-observations">Observações:</label>
+                            <textarea id="update-customer-observations" placeholder="Observações sobre o cliente" rows="3"></textarea>
+                        </div>
+
+                        <button class="btn btn-warning" onclick="updateAsaasCustomer()">✏️ Atualizar Cliente</button>
+                        <button class="btn btn-danger" onclick="deleteAsaasCustomer()">🗑️ Remover Cliente</button>
+                        
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label for="restore-customer-id">Restaurar Cliente (ID):</label>
+                            <input type="text" id="restore-customer-id" placeholder="cus_000006846678">
+                        </div>
+                        <button class="btn btn-success" onclick="restoreAsaasCustomer()">🔄 Restaurar Cliente</button>
+                        
+                        <div id="cliente-manage-result"></div>
+                    </div>
+
+                    <!-- Admin - Listar Clientes -->
+                    <div id="cliente-admin-tab" class="tab-content">
+                        <h4>🔍 Buscar Clientes (Admin):</h4>
+                        
+                        <div class="form-group">
+                            <label for="search-customer-name">Nome:</label>
+                            <input type="text" id="search-customer-name" placeholder="João da Silva">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="search-customer-email">Email:</label>
+                            <input type="text" id="search-customer-email" placeholder="joao@exemplo.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="search-customer-cpf">CPF/CNPJ:</label>
+                            <input type="text" id="search-customer-cpf" placeholder="11144477735">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="search-customer-limit">Limite:</label>
+                            <input type="number" id="search-customer-limit" placeholder="20" value="20">
+                        </div>
+
+                        <button class="btn btn-info" onclick="listAsaasCustomers()">🔍 Buscar Clientes</button>
+                        <button class="btn btn-success" onclick="listAsaasCustomers(true)">📋 Listar Todos</button>
+                        
+                        <div id="cliente-admin-result"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -923,93 +1032,29 @@
         let authToken = null;
         let userData = null;
 
-        // ===== FUNÇÕES DE INTERFACE =====
-
-        function showTab(tabId, element) {
-            // Esconder todos os conteúdos de tab
-            const tabContents = element.parentElement.parentElement.querySelectorAll('.tab-content');
-            tabContents.forEach(content => content.classList.remove('active'));
-
-            // Remover classe active de todas as tabs
-            const tabs = element.parentElement.querySelectorAll('.tab');
-            tabs.forEach(tab => tab.classList.remove('active'));
-
-            // Mostrar o conteúdo da tab selecionada
-            document.getElementById(tabId).classList.add('active');
-            element.classList.add('active');
-        }
-
-        function showResult(elementId, message, type = 'info') {
-            const element = document.getElementById(elementId);
-            element.innerHTML = message;
-            element.className = `result ${type}`;
-        }
-
-        function updateAuthStatus() {
-            const statusElement = document.getElementById('auth-status');
-            if (authToken && userData) {
-                statusElement.innerHTML = `✅ Autenticado como: ${userData.nome} (${userData.papel || 'usuário'})`;
-                statusElement.className = 'auth-status authenticated';
-            } else {
-                statusElement.innerHTML = '❌ Não autenticado';
-                statusElement.className = 'auth-status';
+        // ===== FUNÇÕES UTILITÁRIAS GLOBAIS =====
+        
+        // Função auxiliar para obter valor de elemento com verificação de segurança
+        function getElementValue(id, defaultValue = '') {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.warn(`⚠️ Elemento com ID '${id}' não encontrado`);
+                return defaultValue;
             }
+            return element.value || defaultValue;
         }
 
-        // ===== PREENCHIMENTO RÁPIDO =====
-
-        function fillLogin(type) {
-            const emailField = document.getElementById('login-email');
-            const senhaField = document.getElementById('login-senha');
-
-            switch (type) {
-                case 'admin':
-                    emailField.value = 'admin@loadtech.com';
-                    senhaField.value = 'admin123';
-                    break;
-                case 'user':
-                    emailField.value = 'usuario@loadtech.com';
-                    senhaField.value = '123456';
-                    break;
-                case 'teste':
-                    emailField.value = 'teste@loadtech.com';
-                    senhaField.value = '123456';
-                    break;
+        // Função auxiliar para obter valor de checkbox com verificação de segurança
+        function getElementChecked(id, defaultValue = false) {
+            const element = document.getElementById(id);
+            if (!element) {
+                console.warn(`⚠️ Elemento com ID '${id}' não encontrado`);
+                return defaultValue;
             }
+            return element.checked ?? defaultValue;
         }
 
-        function fillCadastro() {
-            document.getElementById('cadastro-nome').value = 'Usuário Teste';
-            document.getElementById('cadastro-email').value = `teste${Date.now()}@loadtech.com`;
-            document.getElementById('cadastro-senha').value = '123456';
-            document.getElementById('cadastro-telefone').value = '(11) 99999-9999';
-        }
-
-        function fillAtivacaoTeste() {
-            document.getElementById('ativar-email').value = 'teste@loadtech.com';
-            document.getElementById('ativar-codigo').value = '123456';
-        }
-
-        function fillDadosPagamento() {
-            document.getElementById('customer-phone').value = '11987654321';
-            document.getElementById('customer-cpf').value = '11144477735';
-            document.getElementById('customer-cep').value = '01234567';
-            document.getElementById('customer-endereco').value = 'Rua Teste';
-            document.getElementById('customer-numero').value = '123';
-            document.getElementById('customer-cidade').value = 'São Paulo';
-            document.getElementById('customer-estado').value = 'SP';
-            
-            // Dados do cartão de teste
-            document.getElementById('card-number').value = '4111111111111111';
-            document.getElementById('card-holder').value = 'TESTE CARTAO';
-            document.getElementById('card-expiry').value = '12/28';
-            document.getElementById('card-cvv').value = '123';
-            document.getElementById('card-cpf').value = '11144477735';
-            document.getElementById('card-phone').value = '11987654321';
-        }
-
-        // ===== FUNÇÕES DE AUTENTICAÇÃO =====
-
+        // Função de login
         async function login() {
             const email = document.getElementById('login-email').value;
             const senha = document.getElementById('login-senha').value;
@@ -1034,7 +1079,7 @@
                     authToken = data.token;
                     userData = data.user;
                     updateAuthStatus();
-                    showResult('login-result', `✅ Login realizado com sucesso!\\n\\n${JSON.stringify(data, null, 2)}`, 'success');
+                    showResult('login-result', `✅ Login realizado com sucesso!\n\n${JSON.stringify(data, null, 2)}`, 'success');
                 } else {
                     showResult('login-result', `❌ Erro no login: ${data.erro || data.message}`, 'error');
                 }
@@ -1581,22 +1626,22 @@
         }
 
         function fillDadosCliente() {
-            document.getElementById('customer-cpf').value = '11144477735';
-            document.getElementById('customer-phone').value = '1133334444';
-            document.getElementById('customer-mobile').value = '11987654321';
-            document.getElementById('customer-additional-emails').value = 'contato@empresa.com';
-            document.getElementById('customer-cep').value = '01310100';
-            document.getElementById('customer-endereco').value = 'Avenida Paulista';
-            document.getElementById('customer-numero').value = '1000';
-            document.getElementById('customer-complemento').value = 'Andar 10';
-            document.getElementById('customer-bairro').value = 'Bela Vista';
-            document.getElementById('customer-cidade').value = 'São Paulo';
-            document.getElementById('customer-estado').value = 'SP';
-            document.getElementById('customer-company').value = 'Empresa Teste LTDA';
-            document.getElementById('customer-municipal').value = '123456789';
-            document.getElementById('customer-estadual').value = '987654321';
-            document.getElementById('customer-group').value = 'Clientes Premium';
-            document.getElementById('customer-observations').value = 'Cliente de teste para desenvolvimento';
+            setElementValue('customer-cpf', '11144477735');
+            setElementValue('customer-phone', '1133334444');
+            setElementValue('customer-mobile', '11987654321');
+            setElementValue('customer-additional-emails', 'contato@empresa.com');
+            setElementValue('customer-cep', '01310100');
+            setElementValue('customer-endereco', 'Avenida Paulista');
+            setElementValue('customer-numero', '1000');
+            setElementValue('customer-complemento', 'Andar 10');
+            setElementValue('customer-bairro', 'Bela Vista');
+            setElementValue('customer-cidade', 'São Paulo');
+            setElementValue('customer-estado', 'SP');
+            setElementValue('customer-company', 'Empresa Teste LTDA');
+            setElementValue('customer-municipal', '123456789');
+            setElementValue('customer-estadual', '987654321');
+            setElementValue('customer-group', 'Clientes Premium');
+            setElementValue('customer-observations', 'Cliente de teste para desenvolvimento');
             
             showResult('nova-assinatura-result', '✅ Dados de teste preenchidos!', 'success');
         }
@@ -1612,30 +1657,30 @@
             // Coletar todos os dados do formulário
             const customerData = {
                 // Obrigatórios
-                cpfCnpj: document.getElementById('customer-cpf').value.trim(),
+                cpfCnpj: getElementValue('customer-cpf'),
                 
                 // Contato
-                phone: document.getElementById('customer-phone').value.trim(),
-                mobilePhone: document.getElementById('customer-mobile').value.trim(),
-                additionalEmails: document.getElementById('customer-additional-emails').value.trim(),
+                phone: getElementValue('customer-phone'),
+                mobilePhone: getElementValue('customer-mobile'),
+                additionalEmails: getElementValue('customer-additional-emails'),
                 
                 // Endereço
-                postalCode: document.getElementById('customer-cep').value.trim(),
-                address: document.getElementById('customer-endereco').value.trim(),
-                addressNumber: document.getElementById('customer-numero').value.trim(),
-                complement: document.getElementById('customer-complemento').value.trim(),
-                province: document.getElementById('customer-bairro').value.trim(),
+                postalCode: getElementValue('customer-cep'),
+                address: getElementValue('customer-endereco'),
+                addressNumber: getElementValue('customer-numero'),
+                complement: getElementValue('customer-complemento'),
+                province: getElementValue('customer-bairro'),
                 
                 // Empresariais
-                company: document.getElementById('customer-company').value.trim(),
-                municipalInscription: document.getElementById('customer-municipal').value.trim(),
-                stateInscription: document.getElementById('customer-estadual').value.trim(),
+                company: getElementValue('customer-company'),
+                municipalInscription: getElementValue('customer-municipal'),
+                stateInscription: getElementValue('customer-estadual'),
                 
                 // Adicionais
-                groupName: document.getElementById('customer-group').value.trim(),
-                observations: document.getElementById('customer-observations').value.trim(),
-                foreignCustomer: document.getElementById('customer-foreign').checked,
-                notificationDisabled: document.getElementById('customer-notifications-disabled').checked
+                groupName: getElementValue('customer-group'),
+                observations: getElementValue('customer-observations'),
+                foreignCustomer: getElementChecked('customer-foreign', false),
+                notificationDisabled: getElementChecked('customer-notifications-disabled', false)
             };
 
             // Remover campos vazios
@@ -1686,8 +1731,8 @@
                 return;
             }
 
-            const planoId = document.getElementById('plano-assinatura').value;
-            const billingType = document.getElementById('tipo-pagamento').value;
+            const planoId = getElementValue('plano-assinatura');
+            const billingType = getElementValue('tipo-pagamento');
 
             if (!planoId) {
                 showResult('nova-assinatura-result', 'Selecione um plano', 'error');
@@ -1719,19 +1764,31 @@
                     showResult('nova-assinatura-result', '⏳ Criando dados de pagamento...', 'info');
 
                     const customerData = {
-                        phone: document.getElementById('customer-telefone').value || '4738001919',
-                        mobilePhone: document.getElementById('customer-telefone').value || '47999376637',
-                        cpfCnpj: document.getElementById('customer-cpf').value || '24971563792',
-                        address: {
-                            postalCode: document.getElementById('customer-cep').value || '01310-000',
-                            address: document.getElementById('customer-endereco').value || 'Av. Paulista',
-                            addressNumber: document.getElementById('customer-numero').value || '150',
-                            complement: '',
-                            province: document.getElementById('customer-cidade').value || 'Centro',
-                            city: document.getElementById('customer-cidade').value || 'São Paulo',
-                            state: document.getElementById('customer-estado').value || 'SP'
-                        }
+                        // Usando os IDs corretos do formulário atualizado com verificação de segurança
+                        cpfCnpj: getElementValue('customer-cpf', '24971563792'),
+                        phone: getElementValue('customer-phone', '4738001919'),
+                        mobilePhone: getElementValue('customer-mobile', '47999376637'),
+                        additionalEmails: getElementValue('customer-additional-emails'),
+                        postalCode: getElementValue('customer-cep', '01310-000'),
+                        address: getElementValue('customer-endereco', 'Av. Paulista'),
+                        addressNumber: getElementValue('customer-numero', '150'),
+                        complement: getElementValue('customer-complemento'),
+                        province: getElementValue('customer-bairro', 'Centro'),
+                        company: getElementValue('customer-company'),
+                        municipalInscription: getElementValue('customer-municipal'),
+                        stateInscription: getElementValue('customer-estadual'),
+                        groupName: getElementValue('customer-group'),
+                        observations: getElementValue('customer-observations'),
+                        foreignCustomer: getElementChecked('customer-foreign', false),
+                        notificationDisabled: getElementChecked('customer-notifications-disabled', false)
                     };
+
+                    // Remover campos vazios
+                    Object.keys(customerData).forEach(key => {
+                        if (customerData[key] === '' || customerData[key] === null) {
+                            delete customerData[key];
+                        }
+                    });
 
                     console.log('💳 Dados do cliente:', customerData);
 
@@ -1766,7 +1823,7 @@
 
                 // Adicionar dados do cartão se necessário
                 if (billingType === 'CREDIT_CARD' || billingType === 'DEBIT_CARD') {
-                    const expiryValue = document.getElementById('card-expiry').value;
+                    const expiryValue = getElementValue('card-expiry');
                     if (!expiryValue || !expiryValue.includes('/')) {
                         showResult('nova-assinatura-result', '❌ Validade do cartão inválida (use MM/AA)', 'error');
                         return;
@@ -1776,21 +1833,21 @@
                     const expiryYear = '20' + expiryValue.split('/')[1];
 
                     subscriptionData.creditCard = {
-                        holderName: document.getElementById('card-holder').value,
-                        number: document.getElementById('card-number').value,
+                        holderName: getElementValue('card-holder'),
+                        number: getElementValue('card-number'),
                         expiryMonth: expiryMonth,
                         expiryYear: expiryYear,
-                        ccv: document.getElementById('card-cvv').value
+                        ccv: getElementValue('card-cvv')
                     };
 
                     subscriptionData.creditCardHolderInfo = {
-                        name: document.getElementById('card-holder').value,
+                        name: getElementValue('card-holder'),
                         email: userData.email,
-                        cpfCnpj: document.getElementById('card-cpf').value,
-                        postalCode: document.getElementById('customer-cep').value,
-                        addressNumber: document.getElementById('customer-numero').value,
-                        phone: document.getElementById('card-phone').value,
-                        mobilePhone: document.getElementById('card-phone').value
+                        cpfCnpj: getElementValue('card-cpf'),
+                        postalCode: getElementValue('customer-cep'),
+                        addressNumber: getElementValue('customer-numero'),
+                        phone: getElementValue('card-phone'),
+                        mobilePhone: getElementValue('card-phone')
                     };
                 }
 

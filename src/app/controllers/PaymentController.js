@@ -10,11 +10,13 @@ import Assinatura from '../models/Assinatura.js';
 
 class PaymentController {
   /**
-   * Criar cliente no Asaas e associar ao usuário
+   * Criar cliente no Asaas com dados completos (NOVA ABORDAGEM)
+   * Só salva dados essenciais no nosso banco (email, cpf, nome, senha)
+   * Requer verificação de email primeiro
    */
   async createCustomer(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const {
         // Campos obrigatórios do Asaas
         cpfCnpj, // required
@@ -47,6 +49,15 @@ class PaymentController {
         return res.status(404).json({ erro: 'Usuário não encontrado' });
       }
 
+      // ⚠️ VERIFICAR SE EMAIL FOI VERIFICADO ANTES DE CRIAR CONTA NO ASAAS
+      if (user.status !== 'ativo') {
+        return res.status(400).json({ 
+          erro: 'Email deve ser verificado antes de criar dados de pagamento',
+          status: user.status,
+          action: 'verify_email_first'
+        });
+      }
+
       // Verifica se já existe cliente Asaas para este usuário
       if (user.asaas_customer_id) {
         return res.status(400).json({ 
@@ -60,7 +71,7 @@ class PaymentController {
         return res.status(400).json({ erro: 'CPF ou CNPJ é obrigatório' });
       }
 
-      // Preparar dados do cliente para o Asaas
+      // 🚀 PRIMEIRO: CRIAR CLIENTE NO ASAAS COM TODOS OS DADOS
       const customerData = {
         name: user.nome, // required
         cpfCnpj: cpfCnpj, // required
@@ -94,36 +105,21 @@ class PaymentController {
 
       const asaasCustomer = await AsaasClient.createCustomer(customerData);
 
-      // Salvar todos os dados do cliente no usuário
+      // 🎯 SEGUNDO: SALVAR APENAS DADOS ESSENCIAIS NO NOSSO BANCO
       await user.update({
         asaas_customer_id: asaasCustomer.id,
-        cpf_cnpj: cpfCnpj,
-        phone: phone,
-        mobile_phone: mobilePhone,
-        address: address,
-        address_number: addressNumber,
-        complement: complement,
-        province: province,
-        postal_code: postalCode,
-        external_reference: externalReference || user.id.toString(),
-        notification_disabled: notificationDisabled || false,
-        additional_emails: additionalEmails,
-        municipal_inscription: municipalInscription,
-        state_inscription: stateInscription,
-        observations: observations,
-        group_name: groupName,
-        company: company,
-        foreign_customer: foreignCustomer || false
+        cpf_cnpj: cpfCnpj // Salvar CPF para referência e validações futuras
       });
 
-      console.log('✅ Cliente criado no Asaas e dados salvos no banco:', asaasCustomer.id);
+      console.log('✅ Cliente criado no Asaas e ID salvo no banco:', asaasCustomer.id);
 
       return res.status(201).json({
         mensagem: 'Cliente criado com sucesso no sistema de pagamento',
         customer: {
           id: asaasCustomer.id,
           name: asaasCustomer.name,
-          email: asaasCustomer.email
+          email: asaasCustomer.email,
+          cpfCnpj: asaasCustomer.cpfCnpj
         }
       });
     } catch (error) {
@@ -140,7 +136,7 @@ class PaymentController {
    */
   async createSubscription(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id; // Corrigido de req.userId para req.user.id
       const { planoId, billingType, creditCard, creditCardHolderInfo } = req.body;
 
       const user = await User.findByPk(userId);
@@ -243,7 +239,7 @@ class PaymentController {
    */
   async cancelSubscription(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { assinaturaId } = req.params;
 
       const assinatura = await Assinatura.findOne({
@@ -293,7 +289,7 @@ class PaymentController {
    */
   async listUserSubscriptions(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
 
       const assinaturas = await Assinatura.findAll({
         where: { user_id: userId },
@@ -458,7 +454,7 @@ class PaymentController {
    */
   async configureMercadoPago(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { access_token, public_key, webhook_url } = req.body;
 
       // Busca a loja do usuário
@@ -511,7 +507,7 @@ class PaymentController {
    */
   async createProductPayment(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { 
         items, 
         payer, 
@@ -651,7 +647,7 @@ class PaymentController {
    */
   async getMercadoPagoPayment(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { paymentId } = req.params;
 
       const loja = await Loja.findOne({ where: { usuario_id: userId } });
@@ -685,7 +681,7 @@ class PaymentController {
    */
   async getIntegrationStatus(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       
       // Status Asaas (global)
       const asaasStatus = await AsaasClient.getApiStatus();
@@ -723,7 +719,7 @@ class PaymentController {
    */
   async createCreditCardSubscription(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { 
         planoId, 
         creditCard, 
@@ -800,7 +796,7 @@ class PaymentController {
    */
   async createBoletoSubscription(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { planoId, postalService = false, interest, fine } = req.body;
 
       const result = await validateUserAndPlan(userId, planoId);
@@ -851,7 +847,7 @@ class PaymentController {
    */
   async createPixSubscription(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { planoId, pixAddressKey, pixQrCodeId } = req.body;
 
       const result = await validateUserAndPlan(userId, planoId);
@@ -903,7 +899,7 @@ class PaymentController {
    */
   async createDebitSubscription(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { planoId, bankInfo } = req.body;
 
       if (!bankInfo || !bankInfo.bank || !bankInfo.accountType || !bankInfo.agency || !bankInfo.account) {
@@ -961,7 +957,7 @@ class PaymentController {
    */
   async createTransferSubscription(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { planoId } = req.body;
 
       const result = await validateUserAndPlan(userId, planoId);
@@ -1009,6 +1005,252 @@ class PaymentController {
       console.error('Erro ao criar assinatura com transferência:', error);
       return res.status(500).json({
         erro: 'Erro ao criar assinatura com transferência bancária',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Sincronizar dados do Asaas para o nosso banco
+   * Busca clientes no Asaas e atualiza dados locais
+   */
+  async syncAsaasCustomers(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await User.findByPk(userId);
+      
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      if (!user.asaas_customer_id) {
+        return res.status(400).json({ erro: 'Usuário não possui cliente Asaas associado' });
+      }
+
+      // 🔍 BUSCAR DADOS COMPLETOS DO CLIENTE NO ASAAS
+      const asaasCustomer = await AsaasClient.getCustomerById(user.asaas_customer_id);
+
+      // 📥 ATUALIZAR DADOS LOCAIS COM INFORMAÇÕES DO ASAAS
+      await user.update({
+        // Manter apenas dados essenciais + alguns dados úteis do Asaas
+        cpf_cnpj: asaasCustomer.cpfCnpj,
+        telefone: asaasCustomer.mobilePhone || asaasCustomer.phone || user.telefone
+      });
+
+      console.log(`🔄 Dados sincronizados para usuário ${user.email}`);
+
+      return res.json({
+        mensagem: 'Dados sincronizados com sucesso',
+        customer: {
+          id: asaasCustomer.id,
+          name: asaasCustomer.name,
+          email: asaasCustomer.email,
+          cpfCnpj: asaasCustomer.cpfCnpj,
+          phone: asaasCustomer.phone,
+          mobilePhone: asaasCustomer.mobilePhone,
+          address: asaasCustomer.address,
+          city: asaasCustomer.city,
+          state: asaasCustomer.state,
+          postalCode: asaasCustomer.postalCode
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao sincronizar dados:', error);
+      return res.status(500).json({
+        erro: 'Erro ao sincronizar dados do cliente',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Listar todos os clientes do Asaas (apenas para admin)
+   */
+  async listAsaasCustomers(req, res) {
+    try {
+      const { name, email, cpfCnpj, offset = 0, limit = 20 } = req.query;
+
+      const filters = {
+        offset: parseInt(offset),
+        limit: parseInt(limit)
+      };
+
+      if (name) filters.name = name;
+      if (email) filters.email = email;
+      if (cpfCnpj) filters.cpfCnpj = cpfCnpj;
+
+      const customers = await AsaasClient.listCustomers(filters);
+
+      return res.json({
+        customers: customers.data || [],
+        totalCount: customers.totalCount || 0,
+        hasMore: customers.hasMore || false,
+        offset: filters.offset,
+        limit: filters.limit
+      });
+    } catch (error) {
+      console.error('Erro ao listar clientes Asaas:', error);
+      return res.status(500).json({
+        erro: 'Erro ao buscar clientes do sistema de pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Buscar cliente específico no Asaas
+   */
+  async getAsaasCustomer(req, res) {
+    try {
+      const { customerId } = req.params;
+      const userId = req.user.id;
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      // Verificar se o usuário pode acessar este cliente
+      if (user.asaas_customer_id !== customerId && !user.is_admin) {
+        return res.status(403).json({ erro: 'Acesso negado a este cliente' });
+      }
+
+      const customer = await AsaasClient.getCustomerById(customerId);
+
+      return res.json({
+        customer: customer
+      });
+    } catch (error) {
+      console.error('Erro ao buscar cliente Asaas:', error);
+      return res.status(500).json({
+        erro: 'Erro ao buscar cliente no sistema de pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Atualizar cliente no Asaas (ASAAS PRIMEIRO, depois nosso banco)
+   */
+  async updateAsaasCustomer(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await User.findByPk(userId);
+      
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      if (!user.asaas_customer_id) {
+        return res.status(400).json({ erro: 'Cliente não possui conta de pagamento associada' });
+      }
+
+      const updateData = req.body;
+
+      // 🚀 PRIMEIRO: ATUALIZAR NO ASAAS
+      const updatedCustomer = await AsaasClient.updateCustomer(user.asaas_customer_id, updateData);
+
+      // 📝 SEGUNDO: ATUALIZAR DADOS ESSENCIAIS NO NOSSO BANCO
+      const localUpdates = {};
+      if (updateData.cpfCnpj) localUpdates.cpf_cnpj = updateData.cpfCnpj;
+      if (updateData.mobilePhone || updateData.phone) {
+        localUpdates.telefone = updateData.mobilePhone || updateData.phone;
+      }
+
+      if (Object.keys(localUpdates).length > 0) {
+        await user.update(localUpdates);
+      }
+
+      console.log(`🔄 Cliente ${user.asaas_customer_id} atualizado no Asaas e banco`);
+
+      return res.json({
+        mensagem: 'Cliente atualizado com sucesso',
+        customer: updatedCustomer
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      return res.status(500).json({
+        erro: 'Erro ao atualizar cliente no sistema de pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Remover cliente (ASAAS PRIMEIRO, depois nosso banco)
+   */
+  async deleteAsaasCustomer(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await User.findByPk(userId);
+      
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      if (!user.asaas_customer_id) {
+        return res.status(400).json({ erro: 'Cliente não possui conta de pagamento associada' });
+      }
+
+      // 🗑️ PRIMEIRO: REMOVER NO ASAAS
+      await AsaasClient.deleteCustomer(user.asaas_customer_id);
+
+      // 📝 SEGUNDO: LIMPAR REFERÊNCIA NO NOSSO BANCO
+      await user.update({
+        asaas_customer_id: null,
+        cpf_cnpj: null // Limpar também o CPF se desejar
+      });
+
+      console.log(`🗑️ Cliente ${user.email} removido do Asaas e banco`);
+
+      return res.json({
+        mensagem: 'Cliente removido com sucesso do sistema de pagamento'
+      });
+    } catch (error) {
+      console.error('Erro ao remover cliente:', error);
+      return res.status(500).json({
+        erro: 'Erro ao remover cliente do sistema de pagamento',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Restaurar cliente removido (ASAAS PRIMEIRO, depois nosso banco)
+   */
+  async restoreAsaasCustomer(req, res) {
+    try {
+      const { customerId } = req.body;
+      const userId = req.user.id;
+
+      if (!customerId) {
+        return res.status(400).json({ erro: 'ID do cliente é obrigatório' });
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      // 🔄 PRIMEIRO: RESTAURAR NO ASAAS
+      const restoredCustomer = await AsaasClient.restoreCustomer(customerId);
+
+      // 📝 SEGUNDO: ASSOCIAR NOVAMENTE NO NOSSO BANCO
+      await user.update({
+        asaas_customer_id: restoredCustomer.id,
+        cpf_cnpj: restoredCustomer.cpfCnpj
+      });
+
+      console.log(`🔄 Cliente ${customerId} restaurado no Asaas e vinculado ao usuário ${user.email}`);
+
+      return res.json({
+        mensagem: 'Cliente restaurado com sucesso',
+        customer: restoredCustomer
+      });
+    } catch (error) {
+      console.error('Erro ao restaurar cliente:', error);
+      return res.status(500).json({
+        erro: 'Erro ao restaurar cliente no sistema de pagamento',
         detalhes: error.message
       });
     }
@@ -1094,7 +1336,7 @@ class PaymentController {
    */
   async listUserCreditCards(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
 
       const user = await User.findByPk(userId);
       if (!user || !user.asaas_customer_id) {
@@ -1173,7 +1415,7 @@ class PaymentController {
    */
   async createSinglePayment(req, res) {
     try {
-      const userId = req.userId;
+      const userId = req.user.id;
       const { 
         valor, 
         descricao, 
@@ -1253,6 +1495,328 @@ class PaymentController {
       console.error('Erro ao criar cobrança única:', error);
       return res.status(500).json({
         erro: 'Erro ao criar cobrança',
+        detalhes: error.message
+      });
+    }
+  }
+
+  // ===== NOVOS MÉTODOS DE GERENCIAMENTO DE CLIENTES =====
+
+  /**
+   * Listar todos os clientes do Asaas
+   */
+  async listAsaasCustomers(req, res) {
+    try {
+      const { name, email, cpfCnpj, offset = 0, limit = 20 } = req.query;
+
+      const filters = {
+        offset: parseInt(offset),
+        limit: parseInt(limit)
+      };
+
+      if (name) filters.name = name;
+      if (email) filters.email = email;
+      if (cpfCnpj) filters.cpfCnpj = cpfCnpj;
+
+      console.log('📋 Listando clientes Asaas com filtros:', filters);
+
+      const response = await AsaasClient.listCustomers(filters);
+
+      return res.json({
+        sucesso: true,
+        clientes: response.data || [],
+        totalCount: response.totalCount || 0,
+        hasMore: response.hasMore || false,
+        offset: response.offset || 0,
+        limit: response.limit || 20
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao listar clientes Asaas:', error);
+      return res.status(500).json({
+        sucesso: false,
+        erro: 'Erro ao listar clientes',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Obter dados de um cliente específico do Asaas
+   */
+  async getAsaasCustomer(req, res) {
+    try {
+      const { customerId } = req.params;
+
+      if (!customerId) {
+        return res.status(400).json({
+          sucesso: false,
+          erro: 'ID do cliente é obrigatório'
+        });
+      }
+
+      console.log('🔍 Buscando cliente Asaas:', customerId);
+
+      const customer = await AsaasClient.getCustomer(customerId);
+
+      return res.json({
+        sucesso: true,
+        cliente: customer
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao buscar cliente Asaas:', error);
+      return res.status(500).json({
+        sucesso: false,
+        erro: 'Erro ao buscar cliente',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Sincronizar clientes do Asaas com o banco local
+   * Busca clientes por email, CPF e nome que já temos no banco
+   */
+  async syncCustomersFromAsaas(req, res) {
+    try {
+      console.log('🔄 Iniciando sincronização de clientes...');
+
+      // Buscar usuários do banco local que não têm asaas_customer_id
+      const usersWithoutAsaas = await User.findAll({
+        where: {
+          asaas_customer_id: null,
+          email_verificado: true // Só sincronizar usuários com email verificado
+        },
+        attributes: ['id', 'nome', 'email', 'cpf']
+      });
+
+      console.log(`📊 Encontrados ${usersWithoutAsaas.length} usuários para sincronizar`);
+
+      const syncResults = {
+        total: usersWithoutAsaas.length,
+        sincronizados: 0,
+        erros: 0,
+        detalhes: []
+      };
+
+      for (const user of usersWithoutAsaas) {
+        try {
+          console.log(`🔍 Sincronizando usuário: ${user.email}`);
+
+          // Buscar no Asaas por email
+          const asaasResponse = await AsaasClient.listCustomers({
+            email: user.email,
+            limit: 1
+          });
+
+          if (asaasResponse.data && asaasResponse.data.length > 0) {
+            const asaasCustomer = asaasResponse.data[0];
+
+            // Verificar se CPF/nome são compatíveis
+            const isCompatible = 
+              asaasCustomer.name.toLowerCase().includes(user.nome.toLowerCase()) ||
+              user.nome.toLowerCase().includes(asaasCustomer.name.toLowerCase()) ||
+              (user.cpf && asaasCustomer.cpfCnpj === user.cpf);
+
+            if (isCompatible) {
+              // Sincronizar dados
+              await user.update({
+                asaas_customer_id: asaasCustomer.id
+              });
+
+              syncResults.sincronizados++;
+              syncResults.detalhes.push({
+                usuario_id: user.id,
+                email: user.email,
+                asaas_customer_id: asaasCustomer.id,
+                status: 'sincronizado'
+              });
+
+              console.log(`✅ Usuário ${user.email} sincronizado com Asaas ID: ${asaasCustomer.id}`);
+            } else {
+              syncResults.detalhes.push({
+                usuario_id: user.id,
+                email: user.email,
+                status: 'incompatível',
+                motivo: 'Nome ou CPF não conferem'
+              });
+            }
+          } else {
+            syncResults.detalhes.push({
+              usuario_id: user.id,
+              email: user.email,
+              status: 'não_encontrado'
+            });
+          }
+
+        } catch (error) {
+          console.error(`❌ Erro ao sincronizar usuário ${user.email}:`, error);
+          syncResults.erros++;
+          syncResults.detalhes.push({
+            usuario_id: user.id,
+            email: user.email,
+            status: 'erro',
+            erro: error.message
+          });
+        }
+      }
+
+      console.log('✅ Sincronização concluída:', syncResults);
+
+      return res.json({
+        sucesso: true,
+        mensagem: 'Sincronização concluída',
+        resultados: syncResults
+      });
+
+    } catch (error) {
+      console.error('❌ Erro na sincronização:', error);
+      return res.status(500).json({
+        sucesso: false,
+        erro: 'Erro na sincronização',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Atualizar cliente no Asaas
+   */
+  async updateAsaasCustomer(req, res) {
+    try {
+      const { customerId } = req.params;
+      const updateData = req.body;
+
+      if (!customerId) {
+        return res.status(400).json({
+          sucesso: false,
+          erro: 'ID do cliente é obrigatório'
+        });
+      }
+
+      console.log('🔄 Atualizando cliente Asaas:', customerId);
+
+      // 1. Atualizar no Asaas PRIMEIRO
+      const updatedCustomer = await AsaasClient.updateCustomer(customerId, updateData);
+
+      // 2. Atualizar no banco local se necessário
+      if (updateData.cpfCnpj) {
+        const user = await User.findOne({
+          where: { asaas_customer_id: customerId }
+        });
+
+        if (user) {
+          await user.update({
+            cpf: updateData.cpfCnpj
+          });
+        }
+      }
+
+      return res.json({
+        sucesso: true,
+        mensagem: 'Cliente atualizado com sucesso',
+        cliente: updatedCustomer
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao atualizar cliente:', error);
+      return res.status(500).json({
+        sucesso: false,
+        erro: 'Erro ao atualizar cliente',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Remover cliente do Asaas
+   */
+  async deleteAsaasCustomer(req, res) {
+    try {
+      const { customerId } = req.params;
+
+      if (!customerId) {
+        return res.status(400).json({
+          sucesso: false,
+          erro: 'ID do cliente é obrigatório'
+        });
+      }
+
+      console.log('🗑️ Removendo cliente Asaas:', customerId);
+
+      // 1. Remover do Asaas PRIMEIRO
+      await AsaasClient.deleteCustomer(customerId);
+
+      // 2. Remover referência do banco local
+      const user = await User.findOne({
+        where: { asaas_customer_id: customerId }
+      });
+
+      if (user) {
+        await user.update({
+          asaas_customer_id: null
+        });
+      }
+
+      return res.json({
+        sucesso: true,
+        mensagem: 'Cliente removido com sucesso'
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao remover cliente:', error);
+      return res.status(500).json({
+        sucesso: false,
+        erro: 'Erro ao remover cliente',
+        detalhes: error.message
+      });
+    }
+  }
+
+  /**
+   * Restaurar cliente removido do Asaas
+   */
+  async restoreAsaasCustomer(req, res) {
+    try {
+      const { customerId } = req.params;
+
+      if (!customerId) {
+        return res.status(400).json({
+          sucesso: false,
+          erro: 'ID do cliente é obrigatório'
+        });
+      }
+
+      console.log('🔄 Restaurando cliente Asaas:', customerId);
+
+      // 1. Restaurar no Asaas PRIMEIRO
+      const restoredCustomer = await AsaasClient.restoreCustomer(customerId);
+
+      // 2. Restaurar referência no banco local
+      const user = await User.findOne({
+        where: { 
+          email: restoredCustomer.email 
+        }
+      });
+
+      if (user) {
+        await user.update({
+          asaas_customer_id: customerId
+        });
+      }
+
+      return res.json({
+        sucesso: true,
+        mensagem: 'Cliente restaurado com sucesso',
+        cliente: restoredCustomer
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao restaurar cliente:', error);
+      return res.status(500).json({
+        sucesso: false,
+        erro: 'Erro ao restaurar cliente',
         detalhes: error.message
       });
     }

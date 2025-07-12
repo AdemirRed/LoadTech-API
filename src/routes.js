@@ -151,6 +151,23 @@ routes.get('/payment/pix/qr-code/:paymentId', PaymentController.generatePixQrCod
 // Asaas - Status e utilitários
 routes.get('/payment/status', PaymentController.getPaymentStatus);
 
+// ===== GERENCIAMENTO DE CLIENTES ASAAS =====
+
+// Listar clientes do Asaas
+routes.get('/payment/customers', PaymentController.listAsaasCustomers);
+
+// Obter cliente específico do Asaas
+routes.get('/payment/customers/:customerId', PaymentController.getAsaasCustomer);
+
+// Atualizar cliente no Asaas
+routes.put('/payment/customers/:customerId', PaymentController.updateAsaasCustomer);
+
+// Remover cliente do Asaas
+routes.delete('/payment/customers/:customerId', PaymentController.deleteAsaasCustomer);
+
+// Restaurar cliente removido do Asaas
+routes.post('/payment/customers/:customerId/restore', PaymentController.restoreAsaasCustomer);
+
 // Mercado Pago (Produtos)
 routes.post('/payment/mercadopago/configure', PaymentController.configureMercadoPago);
 routes.post('/payment/mercadopago/preference', PaymentController.createProductPayment);
@@ -253,5 +270,26 @@ routes.delete('/admin/planos/:id', PlanoController.delete);
 
 // Sincronização com Asaas
 routes.post('/admin/sync/asaas-orphans', UserController.syncAsaasOrphans);
+
+// ===== GERENCIAMENTO DE CLIENTES ASAAS =====
+
+// Sincronizar dados do Asaas
+routes.get('/payment/customer/sync', PaymentController.syncAsaasCustomers);
+
+// Buscar cliente específico
+routes.get('/payment/customer/:customerId', PaymentController.getAsaasCustomer);
+
+// Atualizar cliente (Asaas primeiro, depois banco)
+routes.put('/payment/customer', PaymentController.updateAsaasCustomer);
+
+// Remover cliente (Asaas primeiro, depois banco)
+routes.delete('/payment/customer', PaymentController.deleteAsaasCustomer);
+
+// Restaurar cliente removido
+routes.post('/payment/customer/restore', PaymentController.restoreAsaasCustomer);
+
+// Sincronização com Asaas
+routes.post('/admin/sync/asaas-orphans', UserController.syncAsaasOrphans);
+routes.post('/admin/sync/asaas-customers', PaymentController.syncCustomersFromAsaas);
 
 export default routes;
