@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 LoadTech - Portal do Cliente</title>
+    <link rel="stylesheet" href="public/css/api-tester.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 LoadTech - Portal do Cliente</h1>
+            <p>Gerencie sua conta, planos e loja de forma simples e intuitiva</p>
+        </div>
+
+        <div class="content">
+            <!-- Seção de Autenticação -->
+            <div class="section">
+                <div class="section-header">
+                    🔐 Conta e Autenticação
+                </div>
+                <div class="section-content">
+                    <div class="auth-status" id="auth-status">
+                        Não autenticado
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('login-tab', this)">Entrar</button>
+                        <button class="tab" onclick="showTab('cadastro-tab', this)">Criar Conta</button>
+                        <button class="tab" onclick="showTab('ativacao-tab', this)">Ativar Conta</button>
+                        <button class="tab" onclick="showTab('recuperacao-tab', this)">Recuperar Senha</button>
+                    </div>
+
+                    <!-- Login -->
+                    <div id="login-tab" class="tab-content active">
+                        <div class="quick-fill">
+                            <strong>📋 Preenchimento Rápido:</strong><br>
+                            <button onclick="fillLogin('teste')">Usuário Teste</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="login-email">Email:</label>
+                            <input type="email" id="login-email" placeholder="seu_email@example.com" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="login-senha">Senha:</label>
+                            <input type="password" id="login-senha" placeholder="Sua senha" required>
+                        </div>
+                        
+                        <button class="btn btn-success" id="login-btn" onclick="login()">🔑 Entrar</button>
+                        <button class="btn btn-secondary" onclick="logout()">🚪 Sair</button>
+                        
+                        <div id="login-result"></div>
+                    </div>
+
+                    <!-- Cadastro -->
+                    <div id="cadastro-tab" class="tab-content">
+                        <div class="quick-fill">
+                            <strong>📋 Preenchimento Rápido:</strong><br>
+                            <button onclick="fillCadastro()">Dados de Teste</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-nome">Nome Completo: *</label>
+                            <input type="text" id="cadastro-nome" placeholder="Seu nome completo" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-email">Email: *</label>
+                            <input type="email" id="cadastro-email" placeholder="seu_email@example.com" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cadastro-senha">Senha: *</label>
+                            <input type="password" id="cadastro-senha" placeholder="Mínimo 6 caracteres" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-confirmar-senha">Confirmar Senha: *</label>
+                            <input type="password" id="cadastro-confirmar-senha" placeholder="Digite a senha novamente" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-cpf">CPF: *</label>
+                            <input type="text" id="cadastro-cpf" placeholder="000.000.000-00" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cadastro-telefone">Telefone:</label>
+                            <input type="text" id="cadastro-telefone" placeholder="(11) 99999-9999">
+                        </div>
+
+                        <div class="info-card">
+                            <h4>📧 Verificação de Email</h4>
+                            <p>Após o cadastro, você receberá um email com código de verificação. É obrigatório verificar o email antes de usar os serviços de pagamento.</p>
+                        </div>
+                        
+                        <button class="btn btn-success" id="cadastro-btn" onclick="cadastro()">📝 Criar Conta</button>
+                        
+                        <div id="cadastro-result"></div>
+                    </div>
+
+                    <!-- Ativação -->
+                    <div id="ativacao-tab" class="tab-content">
+                        <div class="quick-fill">
+                            <strong>🚀 Teste Rápido:</strong><br>
+                            <button onclick="fillAtivacao()">Preencher Teste</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ativacao-email">Email da Conta: *</label>
+                            <input type="email" id="ativacao-email" placeholder="email@exemplo.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ativacao-codigo">Código de Verificação: *</label>
+                            <input type="text" id="ativacao-codigo" placeholder="123456" maxlength="6" required>
+                        </div>
+                        
+                        <button class="btn btn-success" id="ativacao-btn" onclick="verificarEmail()">✅ Verificar Email</button>
+                        <button class="btn btn-warning" onclick="reenviarCodigo()">📧 Reenviar Código</button>
+                        
+                        <div id="ativacao-result"></div>
+                    </div>
+
+                    <!-- Recuperação de Senha -->
+                    <div id="recuperacao-tab" class="tab-content">
+                        <div class="form-group">
+                            <label for="recuperacao-email">Email: *</label>
+                            <input type="email" id="recuperacao-email" placeholder="seu_email@example.com" required>
+                        </div>
+                        
+                        <button class="btn btn-warning" id="recuperacao-btn" onclick="esqueceuSenha()">📧 Enviar Código</button>
+
+                        <hr style="margin: 20px 0;">
+
+                        <div class="form-group">
+                            <label for="redefinir-email">Email: *</label>
+                            <input type="email" id="redefinir-email" placeholder="seu_email@example.com" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="redefinir-codigo">Código: *</label>
+                            <input type="text" id="redefinir-codigo" placeholder="Código recebido por email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="redefinir-senha">Nova Senha: *</label>
+                            <input type="password" id="redefinir-senha" placeholder="Nova senha" required>
+                        </div>
+                        
+                        <button class="btn btn-success" onclick="redefinirSenha()">🔄 Redefinir Senha</button>
+                        
+                        <div id="recuperacao-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Dados de Pagamento -->
+            <div class="section">
+                <div class="section-header">
+                    💳 Dados de Pagamento
+                </div>
+                <div class="section-content">
+                    <div class="info-card">
+                        <h4>🔒 Segurança</h4>
+                        <p>Seus dados de pagamento são processados pelo Asaas, uma plataforma segura e certificada. Você precisa verificar seu email antes de cadastrar dados de pagamento.</p>
+                    </div>
+
+                    <div class="quick-fill">
+                        <strong>🚀 Preenchimento Rápido:</strong><br>
+                        <button onclick="fillDadosCliente()">Dados de Teste</button>
+                    </div>
+
+                    <!-- Campos Obrigatórios -->
+                    <h4 style="margin-bottom: 15px; color: #495057;">📝 Dados Obrigatórios</h4>
+                    
+                    <div class="form-group">
+                        <label for="customer-cpf">CPF/CNPJ: *</label>
+                        <input type="text" id="customer-cpf" placeholder="000.000.000-00" required>
+                    </div>
+
+                    <!-- Dados de Contato -->
+                    <h4 style="margin: 20px 0 15px 0; color: #495057;">📞 Contato</h4>
+                    
+                    <div class="form-group">
+                        <label for="customer-phone">Telefone Fixo:</label>
+                        <input type="text" id="customer-phone" placeholder="(11) 3333-4444">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-mobile">Telefone Celular:</label>
+                        <input type="text" id="customer-mobile" placeholder="(11) 99999-9999">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-additional-emails">Emails Adicionais:</label>
+                        <input type="text" id="customer-additional-emails" placeholder="contato@empresa.com, vendas@empresa.com">
+                        <small style="color: #6c757d;">Separados por vírgula</small>
+                    </div>
+
+                    <!-- Endereço -->
+                    <h4 style="margin: 20px 0 15px 0; color: #495057;">🏠 Endereço</h4>
+                    
+                    <div class="form-group">
+                        <label for="customer-cep">CEP:</label>
+                        <input type="text" id="customer-cep" placeholder="01310-100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-endereco">Logradouro:</label>
+                        <input type="text" id="customer-endereco" placeholder="Avenida Paulista">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-numero">Número:</label>
+                        <input type="text" id="customer-numero" placeholder="1000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-complemento">Complemento:</label>
+                        <input type="text" id="customer-complemento" placeholder="Andar 10, Sala 101">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-bairro">Bairro:</label>
+                        <input type="text" id="customer-bairro" placeholder="Bela Vista">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-cidade">Cidade:</label>
+                        <input type="text" id="customer-cidade" placeholder="São Paulo">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-estado">Estado:</label>
+                        <select id="customer-estado">
+                            <option value="">Selecione...</option>
+                            <option value="AC">Acre</option>
+                            <option value="AL">Alagoas</option>
+                            <option value="AP">Amapá</option>
+                            <option value="AM">Amazonas</option>
+                            <option value="BA">Bahia</option>
+                            <option value="CE">Ceará</option>
+                            <option value="DF">Distrito Federal</option>
+                            <option value="ES">Espírito Santo</option>
+                            <option value="GO">Goiás</option>
+                            <option value="MA">Maranhão</option>
+                            <option value="MT">Mato Grosso</option>
+                            <option value="MS">Mato Grosso do Sul</option>
+                            <option value="MG">Minas Gerais</option>
+                            <option value="PA">Pará</option>
+                            <option value="PB">Paraíba</option>
+                            <option value="PR">Paraná</option>
+                            <option value="PE">Pernambuco</option>
+                            <option value="PI">Piauí</option>
+                            <option value="RJ">Rio de Janeiro</option>
+                            <option value="RN">Rio Grande do Norte</option>
+                            <option value="RS">Rio Grande do Sul</option>
+                            <option value="RO">Rondônia</option>
+                            <option value="RR">Roraima</option>
+                            <option value="SC">Santa Catarina</option>
+                            <option value="SP">São Paulo</option>
+                            <option value="SE">Sergipe</option>
+                            <option value="TO">Tocantins</option>
+                        </select>
+                    </div>
+
+                    <!-- Dados Empresariais (Opcionais) -->
+                    <h4 style="margin: 20px 0 15px 0; color: #495057;">🏢 Dados Empresariais (Opcionais)</h4>
+                    
+                    <div class="form-group">
+                        <label for="customer-company">Empresa:</label>
+                        <input type="text" id="customer-company" placeholder="Minha Empresa LTDA">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-municipal">Inscrição Municipal:</label>
+                        <input type="text" id="customer-municipal" placeholder="123456789">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-estadual">Inscrição Estadual:</label>
+                        <input type="text" id="customer-estadual" placeholder="123456789">
+                    </div>
+
+                    <!-- Campos Adicionais -->
+                    <h4 style="margin: 20px 0 15px 0; color: #495057;">📋 Informações Adicionais</h4>
+                    
+                    <div class="form-group">
+                        <label for="customer-group">Nome do Grupo:</label>
+                        <input type="text" id="customer-group" placeholder="Clientes VIP">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-observations">Observações:</label>
+                        <textarea id="customer-observations" placeholder="Observações sobre o cliente" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" id="customer-foreign">
+                        <label for="customer-foreign">Cliente Estrangeiro</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" id="customer-notifications-disabled">
+                        <label for="customer-notifications-disabled">Desabilitar Notificações</label>
+                    </div>                        <button class="btn btn-success" id="payment-btn" onclick="criarClientePagamento()">💳 Criar Dados de Pagamento</button>
+                    
+                    <div id="payment-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Planos e Assinaturas -->
+            <div class="section">
+                <div class="section-header">
+                    💎 Planos e Assinaturas
+                </div>
+                <div class="section-content">
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('planos-disponiveis-tab', this)">Planos Disponíveis</button>
+                        <button class="tab" onclick="showTab('nova-assinatura-tab', this)">Adquirir Plano</button>
+                        <button class="tab" onclick="showTab('minhas-assinaturas-tab', this)">Minhas Assinaturas</button>
+                    </div>
+
+                    <!-- Planos Disponíveis -->
+                    <div id="planos-disponiveis-tab" class="tab-content active">
+                        <div class="info-card">
+                            <h4>💎 Nossos Planos</h4>
+                            <p>Escolha o plano ideal para seu negócio. Todos os planos incluem suporte técnico e atualizações gratuitas.</p>
+                        </div>
+
+                        <button class="btn btn-info" onclick="carregarPlanos()">💎 Ver Planos Disponíveis</button>
+                        <button class="btn btn-info" onclick="compararPlanos()">⚖️ Comparar Planos</button>
+                        
+                        <div id="plans-result"></div>
+                    </div>
+
+                    <!-- Nova Assinatura -->
+                    <div id="nova-assinatura-tab" class="tab-content">
+                        <div class="info-card">
+                            <h4>🚀 Adquirir Novo Plano</h4>
+                            <p>Para adquirir um plano, você precisa ter dados de pagamento cadastrados e email verificado.</p>
+                        </div>
+
+                        <div class="quick-fill">
+                            <strong>🚀 Preenchimento Rápido:</strong><br>
+                            <button onclick="preencherDadosCartao()">Dados do Cartão</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="plano-assinatura">Plano Desejado: *</label>
+                            <select id="plano-assinatura" required>
+                                <option value="">Selecione um plano...</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="carregarPlanosDropdown()" style="margin-top: 10px;">🔄 Carregar Planos</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tipo-pagamento">Forma de Pagamento: *</label>
+                            <select id="tipo-pagamento" onchange="mostrarCamposPagamento()" required>
+                                <option value="">Selecione...</option>
+                                <option value="CREDIT_CARD">💳 Cartão de Crédito</option>
+                                <option value="DEBIT_CARD">💳 Cartão de Débito</option>
+                                <option value="BOLETO">🎫 Boleto Bancário</option>
+                                <option value="PIX">🟢 PIX</option>
+                                <option value="BANK_TRANSFER">🏦 Transferência Bancária</option>
+                            </select>
+                        </div>
+
+                        <!-- Dados do Cartão (só aparecem para cartão) -->
+                        <div id="dados-cartao-section" style="display: none;">
+                            <h4 style="margin: 20px 0 15px 0; color: #495057;">💳 Dados do Cartão</h4>
+                            
+                            <div class="form-group">
+                                <label for="card-number">Número do Cartão: *</label>
+                                <input type="text" id="card-number" placeholder="1234 5678 9012 3456" maxlength="19">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-holder">Nome no Cartão: *</label>
+                                <input type="text" id="card-holder" placeholder="NOME COMPLETO">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-expiry">Validade (MM/AA): *</label>
+                                <input type="text" id="card-expiry" placeholder="12/28" maxlength="5">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-cvv">CVV: *</label>
+                                <input type="text" id="card-cvv" placeholder="123" maxlength="4">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-cpf">CPF do Portador: *</label>
+                                <input type="text" id="card-cpf" placeholder="000.000.000-00">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-phone">Telefone do Portador: *</label>
+                                <input type="text" id="card-phone" placeholder="(11) 99999-9999">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-success" onclick="criarAssinatura()">🔥 Adquirir Plano</button>
+                        
+                        <div id="plans-result"></div>
+                    </div>
+
+                    <!-- Minhas Assinaturas -->
+                    <div id="minhas-assinaturas-tab" class="tab-content">
+                        <button class="btn btn-info" onclick="listarMinhasAssinaturas()">📋 Minhas Assinaturas</button>
+                        <button class="btn btn-warning" onclick="assinaturaAtual()">🔥 Assinatura Atual</button>
+                        <button class="btn btn-info" onclick="statusPagamentos()">💳 Status Pagamentos</button>
+                        
+                        <div style="margin-top: 20px;">
+                            <h4>🎯 Gestão de Assinatura:</h4>
+                            <div class="form-group">
+                                <label for="assinatura-id">ID da Assinatura:</label>
+                                <input type="text" id="assinatura-id" placeholder="ID da assinatura para cancelar">
+                            </div>
+                            <button class="btn btn-danger" onclick="cancelarAssinatura()">❌ Cancelar Assinatura</button>
+                        </div>
+                        
+                        <div id="assinaturas-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Loja -->
+            <div class="section">
+                <div class="section-header">
+                    🏪 Minha Loja Online
+                </div>
+                <div class="section-content">
+                    <div class="info-card">
+                        <h4>🏪 Sua Loja Virtual</h4>
+                        <p>Crie e gerencie sua loja online. Você pode personalizar o visual, adicionar produtos e configurar pagamentos.</p>
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab active" onclick="showTab('criar-loja-tab', this)">Criar Loja</button>
+                        <button class="tab" onclick="showTab('gerenciar-loja-tab', this)">Gerenciar Loja</button>
+                        <button class="tab" onclick="showTab('uploads-tab', this)">Uploads</button>
+                    </div>
+
+                    <!-- Criar Loja -->
+                    <div id="criar-loja-tab" class="tab-content active">
+                        <div class="quick-fill">
+                            <strong>🚀 Preenchimento Rápido:</strong><br>
+                            <button onclick="preencherDadosLoja()">Dados de Teste</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="loja-nome">Nome da Loja: *</label>
+                            <input type="text" id="loja-nome" placeholder="Minha Loja Online" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="loja-descricao">Descrição:</label>
+                            <textarea id="loja-descricao" placeholder="Descrição da sua loja" rows="3"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="loja-categoria">Categoria:</label>
+                            <select id="loja-categoria">
+                                <option value="">Selecione uma categoria...</option>
+                                <option value="moda">Moda e Vestuário</option>
+                                <option value="eletronicos">Eletrônicos</option>
+                                <option value="casa">Casa e Decoração</option>
+                                <option value="esportes">Esportes e Lazer</option>
+                                <option value="alimentacao">Alimentação</option>
+                                <option value="servicos">Serviços</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+
+                        <button class="btn btn-success" id="shop-btn" onclick="criarLoja()">🏪 Criar Loja</button>
+                        
+                        <div id="shop-result"></div>
+                    </div>
+
+                    <!-- Gerenciar Loja -->
+                    <div id="gerenciar-loja-tab" class="tab-content">
+                        <button class="btn btn-info" onclick="verMinhaLoja()">🏪 Ver Minha Loja</button>
+                        <button class="btn btn-warning" onclick="mostrarEdicaoLoja()">✏️ Editar Loja</button>
+                        <button class="btn btn-secondary" onclick="alterarStatusLoja()">🔄 Ativar/Desativar</button>
+
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label for="loja-slug">Slug da Loja (para visualizar):</label>
+                            <input type="text" id="loja-slug" placeholder="minha-loja">
+                            <button class="btn btn-info" onclick="visualizarLoja()" style="margin-top: 10px;">👁️ Visualizar Loja</button>
+                        </div>
+
+                        <!-- Formulário de Edição (oculto por padrão) -->
+                        <div id="edicao-loja-form" style="display: none; margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 20px;">
+                            <h4>✏️ Editar Loja</h4>
+                            
+                            <div class="form-group">
+                                <label for="edit-loja-nome">Novo Nome:</label>
+                                <input type="text" id="edit-loja-nome" placeholder="Novo nome da loja">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="edit-loja-descricao">Nova Descrição:</label>
+                                <textarea id="edit-loja-descricao" placeholder="Nova descrição" rows="3"></textarea>
+                            </div>
+
+                            <button class="btn btn-success" onclick="atualizarLoja()">💾 Salvar Alterações</button>
+                        </div>
+                        
+                        <div id="shop-result"></div>
+                    </div>
+
+                    <!-- Uploads -->
+                    <div id="uploads-tab" class="tab-content">
+                        <div class="info-card">
+                            <h4>📤 Sistema de Upload</h4>
+                            <p>Envie imagens para sua loja: logo, banner, avatars e imagens de produtos. Formatos aceitos: JPG, PNG, WebP.</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="upload-type">Tipo de Upload:</label>
+                            <select id="upload-type">
+                                <option value="avatar">👤 Avatar do Usuário</option>
+                                <option value="logo">🏪 Logo da Loja</option>
+                                <option value="banner">🖼️ Banner da Loja</option>
+                                <option value="produto">📦 Imagem de Produto</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="upload-file">Arquivo:</label>
+                            <input type="file" id="upload-file" accept="image/*" multiple>
+                        </div>
+
+                        <button class="btn btn-success" onclick="enviarArquivo()">📤 Enviar</button>
+                        <button class="btn btn-info" onclick="estatisticasUpload()">📊 Estatísticas</button>
+                        <button class="btn btn-warning" onclick="listarArquivos()">📋 Meus Arquivos</button>
+
+                        <div id="uploads-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Perfil -->
+            <div class="section">
+                <div class="section-header">
+                    👤 Meu Perfil
+                </div>
+                <div class="section-content">
+                    <button class="btn btn-info" onclick="verMeuPerfil()">👤 Ver Perfil</button>
+                    <button class="btn btn-warning" onclick="mostrarEdicaoPerfil()">✏️ Editar Perfil</button>
+
+                    <!-- Formulário de Edição de Perfil (oculto por padrão) -->
+                    <div id="edicao-perfil-form" style="display: none; margin-top: 20px; border-top: 1px solid #dee2e6; padding-top: 20px;">
+                        <h4>✏️ Editar Perfil</h4>
+                        
+                        <div class="form-group">
+                            <label for="edit-nome">Nome:</label>
+                            <input type="text" id="edit-nome" placeholder="Novo nome">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-telefone">Telefone:</label>
+                            <input type="text" id="edit-telefone" placeholder="Novo telefone">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-senha-atual">Senha Atual:</label>
+                            <input type="password" id="edit-senha-atual" placeholder="Senha atual (se alterar senha)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-nova-senha">Nova Senha:</label>
+                            <input type="password" id="edit-nova-senha" placeholder="Nova senha (opcional)">
+                        </div>
+
+                        <button class="btn btn-success" onclick="atualizarPerfil()">💾 Salvar Alterações</button>
+                    </div>
+
+                    <div id="perfil-result"></div>
+                </div>
+            </div>
+
+            <!-- Seção de Status do Sistema -->
+            <div class="section">
+                <div class="section-header">
+                    🔧 Status do Sistema
+                </div>
+                <div class="section-content">
+                    <div class="info-card">
+                        <h4>🔧 Saúde do Sistema</h4>
+                        <p>Verifique se todos os serviços estão funcionando corretamente.</p>
+                    </div>
+
+                    <button class="btn btn-info" onclick="verificarSaude()">💚 Status da API</button>
+                    <button class="btn btn-info" onclick="verificarUploads()">📤 Status dos Uploads</button>
+                    <button class="btn btn-info" onclick="executarTodosTestes()">🧪 Executar Todos os Testes</button>
+
+                    <div id="status-result"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="public/js/api-client.js"></script>
+</body>
+</html>

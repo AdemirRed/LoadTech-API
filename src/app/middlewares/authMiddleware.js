@@ -23,6 +23,9 @@ export default async (req, res, next) => {
       nome: decoded.nome, // Adiciona o nome do usuário
     };
 
+    // Adicionar userId também para compatibilidade
+    req.userId = decoded.id;
+
     return next();
   } catch (error) {
     return res.status(401).json({ erro: 'Token inválido.' });

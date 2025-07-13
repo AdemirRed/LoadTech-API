@@ -371,6 +371,134 @@ class AssinaturaController {
       return res.status(500).json({ erro: 'Erro interno do servidor.' });
     }
   }
+
+  // Confirmar assinatura após pagamento Asaas
+  async confirmarAsaas(req, res) {
+    try {
+      const {
+        asaas_subscription_id,
+        asaas_payment_id,
+        plano_id,
+        confirmacao_asaas,
+        confirmed_at
+      } = req.body;
+
+      console.log('🔍 Confirmando assinatura Asaas:', {
+        userId: req.userId,
+        asaas_subscription_id,
+        asaas_payment_id,
+        plano_id
+      });
+
+      // Validar dados obrigatórios
+      if (!asaas_subscription_id || !asaas_payment_id || !plano_id) {
+        return res.status(400).json({
+          erro: 'Dados de confirmação Asaas incompletos',
+          campos_obrigatorios: ['asaas_subscription_id', 'asaas_payment_id', 'plano_id']
+        });
+      }
+
+      // Verificar se assinatura já existe
+      const assinaturaExistente = await Assinatura.findOne({
+        where: { asaas_subscription_id }
+      });
+
+      if (assinaturaExistente) {
+        console.log('⚠️ Assinatura já existe:', assinaturaExistente.id);
+        return res.status(409).json({
+          erro: 'Assinatura já foi confirmada anteriormente',
+          assinatura: {
+            id: assinaturaExistente.id,
+            status: assinaturaExistente.status,
+            data_criacao: assinaturaExistente.created_at
+          }
+        });
+      }
+
+      // Buscar plano
+      const plano = await Plano.findByPk(plano_id);
+      if (!plano) {
+        return res.status(404).json({ erro: 'Plano não encontrado' });
+      }
+
+      // Buscar usuário para obter ID correto
+      const userId = req.userId || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ erro: 'Usuário não identificado' });
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+
+      // Cancelar assinaturas ativas anteriores
+      await Assinatura.update(
+        { status: 'cancelada', data_cancelamento: new Date() },
+        { 
+          where: { 
+            user_id: userId, 
+            status: ['ativa', 'periodo_gratuito'] 
+          } 
+        }
+      );
+
+      // Criar nova assinatura confirmada
+      const assinatura = await Assinatura.create({
+        user_id: userId,
+        plano_id,
+        status: 'ativa',
+        asaas_subscription_id,
+        asaas_payment_id,
+        valor: plano.preco_mensal,
+        data_inicio: confirmed_at || new Date(),
+        data_vencimento: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 dias
+        confirmacao_asaas: JSON.stringify(confirmacao_asaas || {}),
+        metodo_pagamento: 'cartao_credito',
+        ciclo: 'mensal'
+      });
+
+      // Atualizar usuário como premium
+      await User.update(
+        { 
+          plano_ativo: plano.nome,
+          assinatura_ativa: true,
+          data_upgrade: new Date()
+        },
+        { where: { id: userId } }
+      );
+
+      console.log('✅ Assinatura confirmada com sucesso:', assinatura.id);
+
+      return res.status(201).json({
+        success: true,
+        message: 'Assinatura confirmada e ativada com sucesso',
+        assinatura: {
+          id: assinatura.id,
+          plano: plano.nome,
+          status: assinatura.status,
+          valor: assinatura.valor,
+          data_inicio: assinatura.data_inicio,
+          data_vencimento: assinatura.data_vencimento,
+          asaas_subscription_id: assinatura.asaas_subscription_id,
+          asaas_payment_id: assinatura.asaas_payment_id
+        },
+        usuario: {
+          id: user.id,
+          nome: user.nome,
+          plano_ativo: plano.nome,
+          assinatura_ativa: true
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Erro ao confirmar assinatura Asaas:', error);
+      return res.status(500).json({
+        erro: 'Erro interno do servidor',
+        detalhes: error.message
+      });
+    }
+  }
 }
 
 export default new AssinaturaController();

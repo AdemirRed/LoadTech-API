@@ -1,0 +1,118 @@
+
+INTEGRAÇÃO ASAAS - BACKEND NODE.JS
+
+Objetivo:
+---------
+Criar cobranças via API do Asaas com método de pagamento "UNDEFINED" para que o cliente preencha os dados do cartão manualmente na interface do Asaas (invoiceUrl). Após o pagamento, o Asaas enviará uma confirmação via Webhook, que deverá ser tratada no backend.
+
+1. CRIAÇÃO DA COBRANÇA (billingType: "UNDEFINED")
+--------------------------------------------------
+Exemplo de payload enviado ao Asaas:
+
+POST https://api-sandbox.asaas.com/v3/payments/
+Headers:
+  - Content-Type: application/json
+  - Accept: application/json
+  - access_token: <SEU_TOKEN_SANDBOX>
+
+Body (exemplo):
+{
+  "billingType": "UNDEFINED",
+  "customer": "cus_000006847757",
+  "value": 129.9,
+  "dueDate": "2037-06-10",
+  "description": "Pedido 056984",
+  "externalReference": "056984",
+  "discount": {
+    "value": 10,
+    "dueDateLimitDays": 0,
+    "type": "PERCENTAGE"
+  },
+  "interest": {
+    "value": 1
+  },
+  "fine": {
+    "value": 1,
+    "type": "FIXED"
+  },
+  "postalService": false,
+  "callback": {
+    "successUrl": "https://universoredblack.com.br",
+    "autoRedirect": true
+  },
+  "creditCardHolderInfo": {
+    "name": "John Doe",
+    "email": "john.doe@asaas.com",
+    "cpfCnpj": "05074468019",
+    "postalCode": "93950000",
+    "addressNumber": "123",
+    "phone": "51997756708"
+  }
+}
+
+Resposta esperada (exemplo):
+{
+  "status": "PENDING",
+  "invoiceUrl": "https://sandbox.asaas.com/i/bacucss4bna03km3",
+  ...
+}
+
+Redirecione o cliente para essa `invoiceUrl` para que ele insira os dados do cartão no site do Asaas.
+
+2. WEBHOOK PARA CONFIRMAÇÃO DE PAGAMENTO
+----------------------------------------
+Crie a rota POST no backend em: /api/webhook/pagameto
+
+Exemplo usando Express:
+------------------------------------------------
+routes/webhook.js
+------------------------------------------------
+const express = require('express');
+const router = express.Router();
+
+router.post('/pagameto', (req, res) => {
+  const payload = req.body;
+  console.log('Webhook recebido:', JSON.stringify(payload, null, 2));
+
+  if (payload.event === 'PAYMENT_RECEIVED') {
+    const pagamento = payload.payment;
+    const pedidoId = pagamento.externalReference;
+    const status = pagamento.status;
+
+    if (status === 'RECEIVED') {
+      // Atualize o pedido no banco, por exemplo:
+      // Pedido.update({ status: 'Pago' }, { where: { id: pedidoId } })
+      console.log(`Pagamento confirmado para o pedido ${pedidoId}`);
+    }
+  }
+
+  res.sendStatus(200);
+});
+
+module.exports = router;
+
+------------------------------------------------
+server.js ou index.js
+------------------------------------------------
+const express = require('express');
+const bodyParser = require('body-parser');
+const webhookRoutes = require('./routes/webhook');
+
+const app = express();
+app.use(bodyParser.json());
+app.use('/api/webhook', webhookRoutes);
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
+
+3. CONFIGURAÇÃO NO PAINEL ASAAS
+--------------------------------
+URL do webhook:
+https://universoredblack.com.br/api/webhook/pagameto
+
+Evento: PAYMENT_RECEIVED
+
+----------------------------
+FIM DO ARQUIVO

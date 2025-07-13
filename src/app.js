@@ -81,9 +81,11 @@ class App {
     this.app.use((req, res, next) => {
       const origin = req.headers.origin;
       const allowedOrigins = [
+        'http://localhost:5174',
+        'http://127.0.0.1:5174',
         'http://localhost:5173',
-        'http://localhost:3000',
         'http://127.0.0.1:5173',
+        'http://localhost:3000',
         'http://127.0.0.1:3000'
       ];
       
@@ -92,7 +94,7 @@ class App {
       }
       
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Accept-Crypto,X-Session-Id');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Accept-Crypto,x-accept-crypto,X-Crypto-Enabled,X-Session-Id,X-Requested-With,X-API-Key');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       
       if (req.method === 'OPTIONS') {
@@ -102,14 +104,15 @@ class App {
       next();
     });
 
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
-
-    // Middleware de descriptografia (antes das rotas)
+    // Middleware de descriptografia (ANTES do parsing JSON)
     this.app.use(decryptMiddleware({
       enabled: process.env.CRYPTO_ENABLED === 'true',
       debug: process.env.NODE_ENV === 'development'
     }));
+
+    // Parsing JSON (DEPOIS da descriptografia)
+    this.app.use(express.json());
+    this.app.use(express.urlencoded({ extended: true }));
 
     // Servir arquivos estáticos da pasta public
     this.app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
@@ -121,13 +124,19 @@ class App {
     // Middleware de criptografia (depois do CORS, antes das rotas)
     this.app.use(cryptoMiddleware({
       enabled: process.env.CRYPTO_ENABLED === 'true',
-      excludePaths: ['/health', '/uploads'],
+      excludePaths: ['/api/health', '/uploads', '/docs'],
       debug: process.env.NODE_ENV === 'development'
     }));
   }
 
   routes() {
-    this.app.use(routes);
+    // Aplicar prefixo /api para todas as rotas
+    this.app.use('/api', routes);
+    
+    // Manter rotas de documentação sem prefixo
+    this.app.get('/', (req, res) => {
+      res.redirect('/docs/api');
+    });
   }
 }
 

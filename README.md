@@ -22,12 +22,15 @@ API backend completa para o sistema SaaS LoadTech - uma plataforma de e-commerce
 
 ## ✨ Características
 
-### 🔐 Autenticação e Autorização
+### 🔐 Autenticação e Segurança
 - Sistema completo de registro de usuários
 - Verificação de e-mail obrigatória
 - Recuperação de senha por e-mail
 - JWT para autenticação
 - Middleware de autorização por papel (admin/usuário)
+- **🆕 Criptografia End-to-End**: Proteção completa de dados sensíveis
+- Middleware de criptografia configurável via .env
+- Fallback gracioso para comunicação não criptografada
 
 ### 💳 Sistema de Planos e Assinaturas
 - **4 Planos Disponíveis**: Gratuito, Básico, Profissional, Enterprise
@@ -154,6 +157,13 @@ EMAIL_PASS=sua-senha-de-app
 
 # JWT
 JWT_SECRET=seu-jwt-secret-muito-seguro
+
+# 🔐 Criptografia End-to-End (NOVO!)
+CRYPTO_ENABLED=true                    # Ativa/desativa criptografia
+CRYPTO_FORCE=false                     # Força criptografia sempre
+CRYPTO_ALLOW_PLAINTEXT=true            # Permite dados não criptografados
+CRYPTO_DEBUG=false                     # Debug detalhado
+CRYPTO_MASTER_KEY=loadtech_crypto_master_key_2025_muito_segura_producao_deve_ser_diferente
 
 # Pagamentos
 MP_PUBLIC_KEY=seu-mercadopago-public-key
@@ -402,6 +412,25 @@ Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICE
 - **Ademir/RedBlack** - Desenvolvedor Principal
 - Email: ademir1de1oliveira@gmail.com
 - WhatsApp: [+55 51 99775-6708](https://wa.me/5551997756708)
+
+## 📚 Documentação Completa
+
+A documentação completa está organizada em pastas temáticas para facilitar a navegação:
+
+### 🔐 **Criptografia End-to-End (NOVO!)**
+- **[Prompt Frontend](./Documentação/2-Autenticacao-e-Login/PROMPT-FRONTEND-CRIPTOGRAFIA-V2.md)** - Guia para implementação no frontend
+- **[Exemplos por Framework](./Documentação/2-Autenticacao-e-Login/EXEMPLOS-FRAMEWORKS-CRIPTOGRAFIA.md)** - React, Vue, Angular, Vanilla JS
+- **[Checklist de Implementação](./Documentação/2-Autenticacao-e-Login/CHECKLIST-CRIPTOGRAFIA-FRONTEND.md)** - Lista completa de verificações
+- **[Utilitário Frontend](./Documentação/2-Autenticacao-e-Login/loadtech-crypto-v2.js)** - Arquivo pronto para copiar/colar
+- **[Script de Teste](./Documentação/2-Autenticacao-e-Login/teste-criptografia-frontend.js)** - Validação automática
+
+### 📂 **Outras Documentações**
+- **[1-Primeiros-Passos](./Documentação/1-Primeiros-Passos/)** - Setup inicial
+- **[2-Autenticacao-e-Login](./Documentação/2-Autenticacao-e-Login/)** - Sistema de auth completo
+- **[3-Compras-e-Pagamentos](./Documentação/3-Compras-e-Pagamentos/)** - Sistema de checkout
+- **[4-API-e-Swagger](./Documentação/4-API-e-Swagger/)** - Documentação da API
+- **[5-Testes-e-Debug](./Documentação/5-Testes-e-Debug/)** - Scripts e troubleshooting
+- **[6-Seguranca-e-Solucoes](./Documentação/6-Seguranca-e-Solucoes/)** - Segurança e soluções
 
 ## 🆘 Suporte
 

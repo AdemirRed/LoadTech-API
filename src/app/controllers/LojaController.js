@@ -7,6 +7,15 @@ class LojaController {
   // Criar nova loja
   async store(req, res) {
     try {
+      // Verificar se body existe
+      if (!req.body || typeof req.body !== 'object') {
+        console.log('❌ Body vazio ou inválido:', req.body);
+        return res.status(400).json({ 
+          erro: 'Dados da requisição não foram recebidos corretamente',
+          detalhes: 'Body da requisição está vazio ou não é um objeto JSON válido'
+        });
+      }
+
       // Debug: log do body recebido
       console.log('Body recebido:', JSON.stringify(req.body, null, 2));
       console.log('Chaves do body:', Object.keys(req.body));
@@ -74,11 +83,13 @@ class LojaController {
       // Gerar slug único
       const slug = await Loja.gerarSlugUnico(dadosValidados.nome_loja);
 
-      // Criar banco exclusivo para a loja
-      const dbCriado = await createLojaDatabase(slug);
-      if (!dbCriado) {
-        return res.status(500).json({ erro: 'Não foi possível criar o banco de dados exclusivo da loja.' });
-      }
+      // TEMPORÁRIO: Desabilitar criação de banco exclusivo para resolver problema do usuário
+      // TODO: Reabilitar após configurar corretamente o PostgreSQL para criação de bancos
+      // const dbCriado = await createLojaDatabase(slug);
+      // if (!dbCriado) {
+      //   return res.status(500).json({ erro: 'Não foi possível criar o banco de dados exclusivo da loja.' });
+      // }
+      console.log(`📝 DEBUG: Pulando criação de banco exclusivo para loja ${slug}`);
 
       const loja = await Loja.create({
         ...dadosValidados,
@@ -105,19 +116,31 @@ class LojaController {
   // Obter loja do usuário
   async show(req, res) {
     try {
+      // Debug: verificar dados do usuário no request
+      console.log('🔍 Debug /minha-loja - req.user:', req.user);
+      console.log('🔍 Debug /minha-loja - req.userId:', req.userId);
+      
+      const userId = req.user?.id || req.userId;
+      console.log('🔍 Debug /minha-loja - userId final:', userId);
+      
+      if (!userId) {
+        return res.status(401).json({ erro: 'Usuário não identificado no token' });
+      }
+
+      // Teste sem associação para debug
       const loja = await Loja.findOne({
-        where: { user_id: req.user.id },
-        include: [
-          {
-            association: 'proprietario',
-            attributes: ['id', 'nome', 'email'],
-          },
-        ],
+        where: { user_id: userId }
       });
 
+      console.log('🔍 Debug LojaController.show - Resultado da query SEM associação:', loja);
+      console.log('🔍 Debug LojaController.show - Loja é null?', loja === null);
+
       if (!loja) {
+        console.log('❌ Debug LojaController.show - Loja não encontrada para userId:', userId);
         return res.status(404).json({ erro: 'Loja não encontrada.' });
       }
+
+      console.log('✅ Debug LojaController.show - Loja encontrada:', loja.id, loja.nome_loja);
 
       return res.json({
         ...loja.toJSON(),
