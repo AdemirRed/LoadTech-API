@@ -81,10 +81,58 @@ class AsaasClient {
    * Atualiza um cliente no Asaas
    */
   async updateCustomer(customerId, customerData) {
-    return this.makeRequest(`/customers/${customerId}`, {
-      method: 'POST',
-      body: JSON.stringify(customerData)
+    if (!customerId) {
+      throw new Error('ID do cliente é obrigatório para atualização');
+    }
+
+    console.log(`🔄 Atualizando cliente Asaas: ${customerId}`);
+    console.log('📝 Dados para atualização:', customerData);
+
+    // Preparar dados conforme API do Asaas
+    const asaasData = {};
+
+    // Mapear campos obrigatórios e opcionais
+    if (customerData.name !== undefined) asaasData.name = customerData.name;
+    if (customerData.email !== undefined) asaasData.email = customerData.email;
+    if (customerData.cpfCnpj !== undefined) asaasData.cpfCnpj = customerData.cpfCnpj;
+    if (customerData.phone !== undefined) asaasData.phone = customerData.phone;
+    if (customerData.mobilePhone !== undefined) asaasData.mobilePhone = customerData.mobilePhone;
+    if (customerData.address !== undefined) asaasData.address = customerData.address;
+    if (customerData.addressNumber !== undefined) asaasData.addressNumber = customerData.addressNumber;
+    if (customerData.complement !== undefined) asaasData.complement = customerData.complement;
+    if (customerData.province !== undefined) asaasData.province = customerData.province;
+    if (customerData.postalCode !== undefined) asaasData.postalCode = customerData.postalCode;
+    if (customerData.externalReference !== undefined) asaasData.externalReference = customerData.externalReference;
+    if (customerData.notificationDisabled !== undefined) asaasData.notificationDisabled = customerData.notificationDisabled;
+    if (customerData.additionalEmails !== undefined) asaasData.additionalEmails = customerData.additionalEmails;
+    if (customerData.municipalInscription !== undefined) asaasData.municipalInscription = customerData.municipalInscription;
+    if (customerData.stateInscription !== undefined) asaasData.stateInscription = customerData.stateInscription;
+    if (customerData.observations !== undefined) asaasData.observations = customerData.observations;
+    if (customerData.groupName !== undefined) asaasData.groupName = customerData.groupName;
+    if (customerData.company !== undefined) asaasData.company = customerData.company;
+    if (customerData.foreignCustomer !== undefined) asaasData.foreignCustomer = customerData.foreignCustomer;
+
+    // Remover campos null ou undefined para não sobrescrever com valores vazios
+    Object.keys(asaasData).forEach(key => {
+      if (asaasData[key] === null || asaasData[key] === undefined || asaasData[key] === '') {
+        delete asaasData[key];
+      }
     });
+
+    console.log('📤 Dados finais para Asaas:', asaasData);
+
+    try {
+      const result = await this.makeRequest(`/customers/${customerId}`, {
+        method: 'PUT', // Usar PUT conforme documentação Asaas
+        body: JSON.stringify(asaasData)
+      });
+
+      console.log('✅ Cliente Asaas atualizado com sucesso:', result.id);
+      return result;
+    } catch (error) {
+      console.error(`❌ Erro ao atualizar cliente ${customerId}:`, error.message);
+      throw error;
+    }
   }
 
   /**

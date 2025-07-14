@@ -16,6 +16,7 @@ class UserController {
         nome: Yup.string().required('Nome é obrigatório').min(2, 'Nome deve ter pelo menos 2 caracteres'),
         email: Yup.string().email('E-mail inválido').required('E-mail é obrigatório'),
         senha: Yup.string().min(6, 'Senha deve ter pelo menos 6 caracteres').required('Senha é obrigatória'),
+        cpf_cnpj: Yup.string().required('CPF/CNPJ é obrigatório').min(11, 'CPF/CNPJ deve ter pelo menos 11 caracteres'),
         telefone: Yup.string().nullable(),
         plano_id: Yup.string().uuid('Plano inválido').nullable(),
         tipo_periodo: Yup.string().oneOf(['mensal', 'anual'], 'Tipo de período inválido').default('mensal'),
@@ -23,7 +24,7 @@ class UserController {
 
       await schema.validate(req.body);
 
-      const { nome, email, senha, telefone, plano_id, tipo_periodo = 'mensal' } = req.body;
+      const { nome, email, senha, cpf_cnpj, telefone, plano_id, tipo_periodo = 'mensal' } = req.body;
 
       // Verificar se usuário já existe
       const userExists = await User.findOne({ where: { email } });
@@ -49,6 +50,7 @@ class UserController {
         nome,
         email,
         senha,
+        cpf_cnpj,
         telefone,
         codigo_verificacao: codigoVerificacao,
         codigo_verificacao_expiracao: codigoExpiracao,
@@ -545,16 +547,45 @@ Equipe LoadTech - Suporte ao Cliente`,
     try {
       const schema = Yup.object().shape({
         nome: Yup.string().min(2),
+        email: Yup.string().email(),
         telefone: Yup.string().nullable(),
-        senha_atual: Yup.string().when('senha', (senha, field) =>
-          senha ? field.required('Senha atual é obrigatória para alterar a senha') : field
-        ),
-        senha: Yup.string().min(6),
+        cpf_cnpj: Yup.string().required('CPF/CNPJ é obrigatório').min(11, 'CPF/CNPJ deve ter pelo menos 11 caracteres'),
+        postal_code: Yup.string().nullable(),
+        company: Yup.string().nullable(),
+        address: Yup.string().nullable(), // Logradouro
+        address_number: Yup.string().nullable(), // Número
+        complement: Yup.string().nullable(), // Complemento
+        province: Yup.string().nullable(), // Bairro
+        phone: Yup.string().nullable(), // Telefone fixo
+        mobile_phone: Yup.string().nullable(), // Celular
+        observations: Yup.string().nullable(),
+        group_name: Yup.string().nullable(),
+        // SEGURANÇA: Senha atual é OBRIGATÓRIA para confirmar identidade em qualquer alteração
+        senha_atual: Yup.string().required('Senha atual é obrigatória como medida de segurança para alterar dados'),
+        // OPCIONAL: Nova senha só é necessária se o usuário quiser alterá-la
+        nova_senha: Yup.string().min(6, 'Nova senha deve ter pelo menos 6 caracteres').nullable(),
       });
 
       await schema.validate(req.body);
 
-      const { nome, telefone, senha_atual, senha } = req.body;
+      const { 
+        nome, 
+        email, 
+        telefone, 
+        cpf_cnpj, 
+        postal_code, 
+        company, 
+        address, 
+        address_number, 
+        complement, 
+        province, 
+        phone, 
+        mobile_phone, 
+        observations, 
+        group_name, 
+        senha_atual, 
+        nova_senha // Campo opcional para alterar senha
+      } = req.body;
 
       const user = await User.findByPk(req.user.id);
 
@@ -562,18 +593,109 @@ Equipe LoadTech - Suporte ao Cliente`,
         return res.status(404).json({ erro: 'Usuário não encontrado.' });
       }
 
-      // Se está alterando senha, verificar senha atual
-      if (senha && !user.checkPassword(senha_atual)) {
-        return res.status(400).json({ erro: 'Senha atual incorreta.' });
+      // Verificar senha atual SEMPRE (obrigatória para qualquer alteração como medida de segurança)
+      if (!user.checkPassword(senha_atual)) {
+        return res.status(400).json({ erro: 'Senha atual incorreta. A senha é necessária como medida de segurança.' });
       }
 
-      // Atualizar dados
+      // Se está alterando email, verificar se não está em uso
+      if (email && email !== user.email) {
+        const emailExists = await User.findOne({ 
+          where: { 
+            email,
+            id: { [User.sequelize.Op.ne]: user.id }
+          } 
+        });
+        if (emailExists) {
+          return res.status(400).json({ erro: 'Este e-mail já está em uso por outro usuário.' });
+        }
+      }
+
+      // Atualizar dados - incluir todos os campos possíveis
       const dadosAtualizacao = {};
       if (nome) dadosAtualizacao.nome = nome;
+      if (email) dadosAtualizacao.email = email;
       if (telefone !== undefined) dadosAtualizacao.telefone = telefone;
-      if (senha) dadosAtualizacao.senha = senha;
+      if (cpf_cnpj !== undefined) dadosAtualizacao.cpf_cnpj = cpf_cnpj;
+      if (postal_code !== undefined) dadosAtualizacao.postal_code = postal_code;
+      if (company !== undefined) dadosAtualizacao.company = company;
+      if (address !== undefined) dadosAtualizacao.address = address;
+      if (address_number !== undefined) dadosAtualizacao.address_number = address_number;
+      if (complement !== undefined) dadosAtualizacao.complement = complement;
+      if (province !== undefined) dadosAtualizacao.province = province;
+      if (phone !== undefined) dadosAtualizacao.phone = phone;
+      if (mobile_phone !== undefined) dadosAtualizacao.mobile_phone = mobile_phone;
+      if (observations !== undefined) dadosAtualizacao.observations = observations;
+      if (group_name !== undefined) dadosAtualizacao.group_name = group_name;
+      
+      // OPCIONAL: Só atualizar senha se foi fornecida nova senha
+      if (nova_senha) {
+        dadosAtualizacao.senha = nova_senha;
+      }
+
+      console.log('🔄 Dados que serão atualizados:', dadosAtualizacao);
 
       await user.update(dadosAtualizacao);
+
+      // Recarregar usuário para pegar dados atualizados
+      await user.reload();
+
+      // 🔥 SINCRONIZAR COM ASAAS APÓS ATUALIZAÇÃO
+      console.log('🔄 Sincronizando dados atualizados com Asaas...');
+      try {
+        if (user.asaas_customer_id) {
+          // Atualizar cliente existente no Asaas
+          const asaasUpdateData = {
+            name: user.nome,
+            email: user.email,
+            phone: user.phone || user.telefone,
+            mobilePhone: user.mobile_phone || user.telefone,
+            cpfCnpj: user.cpf_cnpj,
+            postalCode: user.postal_code,
+            company: user.company,
+            address: user.address,
+            addressNumber: user.address_number,
+            complement: user.complement,
+            province: user.province,
+            observations: user.observations,
+            groupName: user.group_name,
+          };
+
+          // Remover campos undefined/null/vazios
+          Object.keys(asaasUpdateData).forEach(key => {
+            if (asaasUpdateData[key] === undefined || asaasUpdateData[key] === null || asaasUpdateData[key] === '') {
+              delete asaasUpdateData[key];
+            }
+          });
+
+          const updatedCustomer = await AsaasClient.updateCustomer(user.asaas_customer_id, asaasUpdateData);
+          console.log(`✅ Cliente Asaas atualizado com sucesso: ${user.asaas_customer_id}`);
+        } else {
+          // Se não tem cliente Asaas, criar automaticamente
+          const syncResult = await syncUserWithAsaas(user, {
+            phone: user.phone || user.telefone,
+            mobilePhone: user.mobile_phone || user.telefone,
+            cpfCnpj: user.cpf_cnpj,
+            postalCode: user.postal_code,
+            company: user.company,
+            address: user.address,
+            addressNumber: user.address_number,
+            complement: user.complement,
+            province: user.province,
+            observations: user.observations,
+            groupName: user.group_name,
+          });
+
+          if (syncResult.success) {
+            console.log(`✅ Cliente Asaas criado automaticamente durante atualização: ${syncResult.customerId}`);
+          } else {
+            console.warn(`⚠️ Falha na criação do cliente Asaas:`, syncResult.error);
+          }
+        }
+      } catch (asaasError) {
+        console.error('❌ Erro na sincronização com Asaas:', asaasError);
+        // Não falha a atualização por erro no Asaas, apenas loga
+      }
 
       return res.json({
         mensagem: 'Dados atualizados com sucesso.',
@@ -582,6 +704,18 @@ Equipe LoadTech - Suporte ao Cliente`,
           nome: user.nome,
           email: user.email,
           telefone: user.telefone,
+          cpf_cnpj: user.cpf_cnpj,
+          postal_code: user.postal_code,
+          company: user.company,
+          address: user.address,
+          address_number: user.address_number,
+          complement: user.complement,
+          province: user.province,
+          phone: user.phone,
+          mobile_phone: user.mobile_phone,
+          observations: user.observations,
+          group_name: user.group_name,
+          asaas_customer_id: user.asaas_customer_id,
         },
       });
     } catch (error) {
