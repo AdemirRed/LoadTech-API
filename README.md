@@ -2,7 +2,7 @@
 
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
+
 
 API backend completa para o sistema SaaS LoadTech - uma plataforma de e-commerce similar ao Mercado Livre, Shopee e AliExpress, desenvolvida com Node.js, Express, PostgreSQL e Redis.
 
