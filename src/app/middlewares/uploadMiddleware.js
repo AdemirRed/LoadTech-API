@@ -12,26 +12,32 @@ const __dirname = path.dirname(__filename);
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadType = req.uploadType || 'geral';
+    const userId = req.user?.id; // ID do usuário logado
     let uploadPath;
 
     switch (uploadType) {
       case 'produto':
-        uploadPath = path.join(__dirname, '../../../public/uploads/produtos');
+        // Produtos organizados por usuário: /uploads/produtos/{userId}/
+        uploadPath = path.join(__dirname, '../../../public/uploads/produtos', userId || 'anonimo');
         break;
       case 'avatar':
-        uploadPath = path.join(__dirname, '../../../public/uploads/avatars');
+        // Avatares organizados por usuário: /uploads/avatars/{userId}/
+        uploadPath = path.join(__dirname, '../../../public/uploads/avatars', userId || 'anonimo');
         break;
       case 'logo':
-        uploadPath = path.join(__dirname, '../../../public/uploads/logos');
+        // Logos organizados por usuário: /uploads/logos/{userId}/
+        uploadPath = path.join(__dirname, '../../../public/uploads/logos', userId || 'anonimo');
         break;
       case 'banner':
-        uploadPath = path.join(__dirname, '../../../public/uploads/banners');
+        // Banners organizados por usuário: /uploads/banners/{userId}/
+        uploadPath = path.join(__dirname, '../../../public/uploads/banners', userId || 'anonimo');
         break;
       case 'documento':
-        uploadPath = path.join(__dirname, '../../../public/uploads/documentos');
+        // Documentos organizados por usuário: /uploads/documentos/{userId}/
+        uploadPath = path.join(__dirname, '../../../public/uploads/documentos', userId || 'anonimo');
         break;
       default:
-        uploadPath = path.join(__dirname, '../../../public/uploads');
+        uploadPath = path.join(__dirname, '../../../public/uploads', userId || 'anonimo');
     }
 
     // Criar diretório se não existir
@@ -42,9 +48,59 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = uuidv4();
+    const uploadType = req.uploadType || 'geral';
+    const userId = req.user?.id;
+    const userName = req.user?.nome ? req.user.nome.toLowerCase().replace(/\s+/g, '-') : 'usuario';
     const fileExtension = path.extname(file.originalname);
-    const fileName = `${uniqueSuffix}${fileExtension}`;
+    let fileName;
+
+    switch (uploadType) {
+      case 'avatar':
+        // Avatar: {userId}-{nome}.jpg (substitui arquivo anterior)
+        fileName = `${userId}-${userName}${fileExtension}`;
+        break;
+      case 'produto':
+        // Produto: produto-{uuid}.jpg (múltiplos produtos por usuário)
+        const produtoUuid = uuidv4();
+        fileName = `produto-${produtoUuid}${fileExtension}`;
+        break;
+      case 'logo':
+        // Logo da loja: logo-{userId}-{nome}.jpg (substitui arquivo anterior)
+        fileName = `logo-${userId}-${userName}${fileExtension}`;
+        break;
+      case 'banner':
+        // Banner da loja: banner-{userId}-{nome}.jpg (substitui arquivo anterior)
+        fileName = `banner-${userId}-${userName}${fileExtension}`;
+        break;
+      case 'documento':
+        // Documento: doc-{uuid}.pdf (múltiplos documentos por usuário)
+        const docUuid = uuidv4();
+        fileName = `doc-${docUuid}${fileExtension}`;
+        break;
+      default:
+        const uniqueSuffix = uuidv4();
+        fileName = `${uniqueSuffix}${fileExtension}`;
+    }
+
+    // Remover arquivo anterior para avatares, logos e banners (únicos por usuário)
+    if (['avatar', 'logo', 'banner'].includes(uploadType) && userId) {
+      const uploadPath = req.uploadPath || path.dirname(cb);
+      const existingFiles = fs.existsSync(uploadPath) ? fs.readdirSync(uploadPath) : [];
+      
+      // Remover arquivo anterior com mesmo padrão
+      existingFiles.forEach(existingFile => {
+        if (existingFile.startsWith(`${uploadType === 'logo' ? 'logo-' : uploadType === 'banner' ? 'banner-' : ''}${userId}-`)) {
+          const oldFilePath = path.join(uploadPath, existingFile);
+          try {
+            fs.unlinkSync(oldFilePath);
+            console.log(`🗑️ Arquivo anterior removido: ${existingFile}`);
+          } catch (error) {
+            console.warn(`⚠️ Erro ao remover arquivo anterior: ${error.message}`);
+          }
+        }
+      });
+    }
+
     cb(null, fileName);
   }
 });
