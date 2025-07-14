@@ -11,6 +11,7 @@ class UploadController {
   async uploadProductImage(req, res) {
     try {
       const { produtoId } = req.params;
+      const userId = req.user.id;
       const lojaId = req.user.loja?.id;
 
       if (!lojaId) {
@@ -25,14 +26,27 @@ class UploadController {
         });
       }
 
+      // Construir URL correta do produto (incluindo subpasta do usuário)
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const imagemUrl = `${baseUrl}/uploads/produtos/${userId}/${req.uploadedFile.original.filename}`;
+
       // Aqui você pode salvar as URLs no banco de dados
-      // Exemplo: await Produto.update({ imagens: req.uploadedFile }, { where: { id: produtoId } });
+      // Exemplo: await Produto.update({ imagens: imagemUrl }, { where: { id: produtoId } });
 
       res.json({
         mensagem: 'Imagem do produto enviada com sucesso',
         produto_id: produtoId,
+        user_id: userId,
         loja_id: lojaId,
-        arquivo: req.uploadedFile,
+        imagem_url: imagemUrl,
+        arquivo: {
+          ...req.uploadedFile,
+          // Garantir que a URL retornada esteja correta
+          original: {
+            ...req.uploadedFile.original,
+            url: imagemUrl
+          }
+        },
       });
     } catch (error) {
       console.error('Erro no upload de imagem do produto:', error);
@@ -54,8 +68,9 @@ class UploadController {
         });
       }
 
-      // Atualizar URL do logo no banco de dados (no usuário)
-      const logoUrl = req.uploadedFile.versions?.medium?.url || req.uploadedFile.original.url;
+      // Construir URL correta do logo (incluindo subpasta do usuário)
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const logoUrl = `${baseUrl}/uploads/logos/${userId}/${req.uploadedFile.original.filename}`;
       
       await User.update(
         { logo_url: logoUrl },
@@ -69,7 +84,14 @@ class UploadController {
         user_id: userId,
         loja_id: lojaId,
         logo_url: logoUrl,
-        arquivo: req.uploadedFile,
+        arquivo: {
+          ...req.uploadedFile,
+          // Garantir que a URL retornada esteja correta
+          original: {
+            ...req.uploadedFile.original,
+            url: logoUrl
+          }
+        },
       });
     } catch (error) {
       console.error('Erro no upload de logo da loja:', error);
@@ -82,6 +104,7 @@ class UploadController {
   // Upload de banner da loja
   async uploadLojaBanner(req, res) {
     try {
+      const userId = req.user.id;
       const lojaId = req.user.loja?.id;
 
       if (!lojaId) {
@@ -96,13 +119,26 @@ class UploadController {
         });
       }
 
+      // Construir URL correta do banner (incluindo subpasta do usuário)
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const bannerUrl = `${baseUrl}/uploads/banners/${userId}/${req.uploadedFile.original.filename}`;
+
       // Aqui você pode atualizar o banner da loja no banco
-      // Exemplo: await Loja.update({ banner: req.uploadedFile.original.url }, { where: { id: lojaId } });
+      // Exemplo: await Loja.update({ banner: bannerUrl }, { where: { id: lojaId } });
 
       res.json({
         mensagem: 'Banner da loja enviado com sucesso',
+        user_id: userId,
         loja_id: lojaId,
-        arquivo: req.uploadedFile,
+        banner_url: bannerUrl,
+        arquivo: {
+          ...req.uploadedFile,
+          // Garantir que a URL retornada esteja correta
+          original: {
+            ...req.uploadedFile.original,
+            url: bannerUrl
+          }
+        },
       });
     } catch (error) {
       console.error('Erro no upload de banner da loja:', error);
@@ -123,21 +159,58 @@ class UploadController {
         });
       }
 
-      // Atualizar URL do avatar no banco de dados
-      const avatarUrl = req.uploadedFile.versions?.medium?.url || req.uploadedFile.original.url;
+      // Construir URL correta do avatar (incluindo subpasta do usuário)
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const avatarUrl = `${baseUrl}/uploads/avatars/${userId}/${req.uploadedFile.original.filename}`;
       
-      await User.update(
-        { avatar_url: avatarUrl },
-        { where: { id: userId } }
-      );
+      // Buscar dados completos do usuário para sincronização
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ erro: 'Usuário não encontrado' });
+      }
+      
+      // Atualizar avatar no banco
+      await user.update({ avatar_url: avatarUrl });
 
       console.log(`✅ Avatar atualizado para usuário ${userId}: ${avatarUrl}`);
+
+      // 🔥 SINCRONIZAR COM ASAAS APÓS UPLOAD DE AVATAR
+      if (user.asaas_customer_id) {
+        try {
+          console.log('🔄 Sincronizando avatar com Asaas...');
+          
+          // Importar AsaasClient dinamicamente para evitar dependência circular
+          const { default: AsaasClient } = await import('../../services/AsaasClient.js');
+          
+          // Note: Asaas não suporta campo de avatar/imagem diretamente
+          // Mas podemos incluir a URL nas observações ou usar um campo customizado
+          const observationsWithAvatar = user.observations 
+            ? `${user.observations}\n\nAvatar: ${avatarUrl}`
+            : `Avatar: ${avatarUrl}`;
+
+          await AsaasClient.updateCustomer(user.asaas_customer_id, {
+            observations: observationsWithAvatar
+          });
+
+          console.log('✅ Avatar sincronizado com Asaas nas observações');
+        } catch (asaasError) {
+          console.warn('⚠️ Falha na sincronização do avatar com Asaas:', asaasError.message);
+          // Não falha o upload por erro no Asaas
+        }
+      }
 
       res.json({
         mensagem: 'Avatar do usuário enviado com sucesso',
         user_id: userId,
         avatar_url: avatarUrl,
-        arquivo: req.uploadedFile,
+        arquivo: {
+          ...req.uploadedFile,
+          // Garantir que a URL retornada esteja correta
+          original: {
+            ...req.uploadedFile.original,
+            url: avatarUrl
+          }
+        },
       });
     } catch (error) {
       console.error('Erro no upload de avatar do usuário:', error);
@@ -180,10 +253,22 @@ class UploadController {
         });
       }
 
+      // Construir URL correta do documento (incluindo subpasta do usuário)
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const documentoUrl = `${baseUrl}/uploads/documentos/${userId}/${req.uploadedFile.original.filename}`;
+
       res.json({
         mensagem: 'Documento enviado com sucesso',
         user_id: userId,
-        arquivo: req.uploadedFile,
+        documento_url: documentoUrl,
+        arquivo: {
+          ...req.uploadedFile,
+          // Garantir que a URL retornada esteja correta
+          original: {
+            ...req.uploadedFile.original,
+            url: documentoUrl
+          }
+        },
       });
     } catch (error) {
       console.error('Erro no upload de documento:', error);
@@ -196,6 +281,7 @@ class UploadController {
   // Listar arquivos de uma loja
   async listLojaFiles(req, res) {
     try {
+      const userId = req.user.id;
       const lojaId = req.user.loja?.id;
 
       if (!lojaId) {
@@ -204,19 +290,20 @@ class UploadController {
         });
       }
 
-      // Aqui você pode buscar os arquivos da loja no banco de dados
-      // Por enquanto, vamos listar os arquivos das pastas
-
+      // Listar arquivos organizados por usuário
       const uploadsPath = path.join(__dirname, '../../../public/uploads');
-      const folders = ['produtos', 'logos', 'banners'];
+      const folders = ['produtos', 'avatars', 'logos', 'banners', 'documentos'];
       const files = {};
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
 
       for (const folder of folders) {
-        const folderPath = path.join(uploadsPath, folder);
-        if (fs.existsSync(folderPath)) {
-          files[folder] = fs.readdirSync(folderPath).map(filename => ({
+        const userFolderPath = path.join(uploadsPath, folder, userId.toString());
+        if (fs.existsSync(userFolderPath)) {
+          files[folder] = fs.readdirSync(userFolderPath).map(filename => ({
             filename,
-            url: `${req.protocol}://${req.get('host')}/uploads/${folder}/${filename}`
+            url: `${baseUrl}/uploads/${folder}/${userId}/${filename}`,
+            size: fs.statSync(path.join(userFolderPath, filename)).size,
+            modified: fs.statSync(path.join(userFolderPath, filename)).mtime
           }));
         } else {
           files[folder] = [];
@@ -225,6 +312,7 @@ class UploadController {
 
       res.json({
         mensagem: 'Arquivos da loja listados com sucesso',
+        user_id: userId,
         loja_id: lojaId,
         arquivos: files,
       });
@@ -285,6 +373,7 @@ class UploadController {
   // Estatísticas de uso
   async getUsageStats(req, res) {
     try {
+      const userId = req.user.id;
       const uploadsPath = path.join(__dirname, '../../../public/uploads');
       const folders = ['produtos', 'avatars', 'logos', 'banners', 'documentos'];
       const stats = {};
@@ -293,13 +382,13 @@ class UploadController {
       let totalFiles = 0;
 
       for (const folder of folders) {
-        const folderPath = path.join(uploadsPath, folder);
-        if (fs.existsSync(folderPath)) {
-          const files = fs.readdirSync(folderPath);
+        const userFolderPath = path.join(uploadsPath, folder, userId.toString());
+        if (fs.existsSync(userFolderPath)) {
+          const files = fs.readdirSync(userFolderPath);
           let folderSize = 0;
 
           files.forEach(filename => {
-            const filePath = path.join(folderPath, filename);
+            const filePath = path.join(userFolderPath, filename);
             const fileStat = fs.statSync(filePath);
             folderSize += fileStat.size;
           });
@@ -323,6 +412,7 @@ class UploadController {
 
       res.json({
         mensagem: 'Estatísticas de uso obtidas com sucesso',
+        user_id: userId,
         total: {
           files: totalFiles,
           size: totalSize,

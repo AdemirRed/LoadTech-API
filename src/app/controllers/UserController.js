@@ -564,6 +564,8 @@ Equipe LoadTech - Suporte ao Cliente`,
         senha_atual: Yup.string().required('Senha atual é obrigatória como medida de segurança para alterar dados'),
         // OPCIONAL: Nova senha só é necessária se o usuário quiser alterá-la
         nova_senha: Yup.string().min(6, 'Nova senha deve ter pelo menos 6 caracteres').nullable(),
+        // OPCIONAL: Avatar/foto de perfil (URL)
+        avatar_url: Yup.string().url('URL do avatar deve ser válida').nullable(),
       });
 
       await schema.validate(req.body);
@@ -584,7 +586,8 @@ Equipe LoadTech - Suporte ao Cliente`,
         observations, 
         group_name, 
         senha_atual, 
-        nova_senha // Campo opcional para alterar senha
+        nova_senha, // Campo opcional para alterar senha
+        avatar_url // Campo opcional para avatar/foto de perfil
       } = req.body;
 
       const user = await User.findByPk(req.user.id);
@@ -627,6 +630,7 @@ Equipe LoadTech - Suporte ao Cliente`,
       if (mobile_phone !== undefined) dadosAtualizacao.mobile_phone = mobile_phone;
       if (observations !== undefined) dadosAtualizacao.observations = observations;
       if (group_name !== undefined) dadosAtualizacao.group_name = group_name;
+      if (avatar_url !== undefined) dadosAtualizacao.avatar_url = avatar_url;
       
       // OPCIONAL: Só atualizar senha se foi fornecida nova senha
       if (nova_senha) {
@@ -716,6 +720,7 @@ Equipe LoadTech - Suporte ao Cliente`,
           observations: user.observations,
           group_name: user.group_name,
           asaas_customer_id: user.asaas_customer_id,
+          avatar_url: user.avatar_url, // Incluir URL do avatar na resposta
         },
       });
     } catch (error) {
