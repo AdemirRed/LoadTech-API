@@ -1,6 +1,7 @@
 import { Sequelize } from 'sequelize';
 
-import configDatabase from '../config/database.js';
+import { configDatabase } from '../config/database.js';
+
 
 // Importar todos os models
 import User from '../app/models/User.js';
