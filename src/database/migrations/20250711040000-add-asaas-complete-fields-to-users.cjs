@@ -1,4 +1,5 @@
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   const transaction = await queryInterface.sequelize.transaction();
   
   try {
@@ -151,9 +152,9 @@ export const up = async (queryInterface, Sequelize) => {
     console.error('❌ Erro na migração:', error);
     throw error;
   }
-};
+  },
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   const transaction = await queryInterface.sequelize.transaction();
   
   try {
@@ -195,5 +196,6 @@ export const down = async (queryInterface, Sequelize) => {
     await transaction.rollback();
     console.error('❌ Erro no rollback:', error);
     throw error;
+  }
   }
 };

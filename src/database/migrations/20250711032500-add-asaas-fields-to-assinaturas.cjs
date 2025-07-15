@@ -2,7 +2,8 @@
  * Migration para adicionar campos de integração Asaas na tabela assinaturas
  */
 
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   await queryInterface.addColumn('assinaturas', 'asaas_subscription_id', {
     type: Sequelize.STRING,
     allowNull: true,
@@ -36,9 +37,9 @@ export const up = async (queryInterface, Sequelize) => {
   await queryInterface.addIndex('assinaturas', ['status'], {
     name: 'idx_assinaturas_status'
   });
-};
+  },
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   await queryInterface.removeIndex('assinaturas', 'idx_assinaturas_status');
   await queryInterface.removeIndex('assinaturas', 'idx_assinaturas_asaas_subscription_id');
   
@@ -49,4 +50,5 @@ export const down = async (queryInterface, Sequelize) => {
   
   // Remover ENUM se não estiver sendo usado em outros lugares
   await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_assinaturas_forma_pagamento";');
+  }
 };

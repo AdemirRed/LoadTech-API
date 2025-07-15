@@ -1,6 +1,7 @@
-import { DataTypes } from 'sequelize';
+const { DataTypes } = require('sequelize');
 
-export async function up(queryInterface, Sequelize) {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   const transaction = await queryInterface.sequelize.transaction();
   
   try {
@@ -144,9 +145,9 @@ export async function up(queryInterface, Sequelize) {
     console.error('❌ Erro ao adicionar campos:', error);
     throw error;
   }
-}
+  },
 
-export async function down(queryInterface, Sequelize) {
+  down: async (queryInterface, Sequelize) => {
   const transaction = await queryInterface.sequelize.transaction();
   
   try {
@@ -190,4 +191,5 @@ export async function down(queryInterface, Sequelize) {
     console.error('❌ Erro ao remover campos:', error);
     throw error;
   }
-}
+  }
+};

@@ -1,6 +1,7 @@
-import { DataTypes } from 'sequelize';
+const { DataTypes } = require('sequelize');
 
-export async function up(queryInterface, Sequelize) {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   // Verificar quais campos já existem para evitar duplicação
   const tableDescription = await queryInterface.describeTable('users');
   
@@ -214,9 +215,9 @@ export async function up(queryInterface, Sequelize) {
   }
 
   console.log('✅ Campos do Asaas Customer adicionados na tabela users');
-}
+  },
 
-export async function down(queryInterface, Sequelize) {
+  down: async (queryInterface, Sequelize) => {
   // Remover índices
   await queryInterface.removeIndex('users', 'users_external_reference_idx');
   await queryInterface.removeIndex('users', 'users_postal_code_idx');
@@ -241,4 +242,5 @@ export async function down(queryInterface, Sequelize) {
   await queryInterface.removeColumn('users', 'foreign_customer');
 
   console.log('✅ Campos do Asaas Customer removidos da tabela users');
-}
+  }
+};

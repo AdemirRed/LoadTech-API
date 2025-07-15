@@ -36,10 +36,10 @@ const config = {
 
   migrationStorage: 'sequelize',
   migrationStorageTableName: 'sequelize_meta',
-  migrationStorageTableSchema: 'loadtech',
+  migrationStorageTableSchema: 'public',
   seederStorage: 'sequelize',
   seederStorageTableName: 'sequelize_seeds',
-  seederStorageTableSchema: 'loadtech',
+  seederStorageTableSchema: 'public',
 };
 
 export default config;
