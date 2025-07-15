@@ -5,7 +5,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import './database/index.js';
 import { connectRedis } from './config/redis.js';
-import { setupSwagger } from './config/swagger.js';
 import routes from './routes.js';
 import { cryptoMiddleware, decryptMiddleware } from './app/middlewares/cryptoMiddleware.js';
 
@@ -18,16 +17,14 @@ class App {
     this.initRedis();
     this.createUploadFolders();
     this.middleware();
-    this.setupSwagger();
+   
     this.routes();
   }
 
   /**
-   * Configura Swagger UI
+   * Configura  UI
    */
-  setupSwagger() {
-    setupSwagger(this.app);
-  }
+  
 
   /**
    * Inicializa conexão com Redis
