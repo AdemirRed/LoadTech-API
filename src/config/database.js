@@ -42,4 +42,9 @@ const config = {
   seederStorageTableSchema: 'loadtech',
 };
 
-export default config;
+module.exports = {
+  development: config,
+  production: config,
+  test: config,
+};
+
