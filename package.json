@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "API para gerenciamento de acesso de veículos",
   "main": "src/server.js",
-  "type": "module",
+  "type": "module"
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "sequelize db:migrate",
     "start": "node src/server.js",
     "dev": "nodemon",
     "lint": "eslint .",

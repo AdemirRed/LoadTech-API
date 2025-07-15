@@ -2,7 +2,7 @@
 
 ![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
+
 
 API backend completa para o sistema SaaS LoadTech - uma plataforma de e-commerce similar ao Mercado Livre, Shopee e AliExpress, desenvolvida com Node.js, Express, PostgreSQL e Redis.
 
@@ -434,11 +434,29 @@ A documentação completa está organizada em pastas temáticas para facilitar a
 
 ## 🆘 Suporte
 
-- 📧 Email: suporte@loadtech.com
+- 📧 Email: ademir1de1oliveira@gmail.com
 - 📱 WhatsApp: [+55 51 99775-6708](https://wa.me/5551997756708)
-- 📖 Documentação: [docs.loadtech.com](https://docs.loadtech.com)
+❌ 📖 Documentação: [docs.loadtech.com](https://docs.loadtech.com)
 - 🐛 Issues: [GitHub Issues](https://github.com/seu-usuario/LoadTech-API/issues)
 
 ---
 
 **LoadTech** - Transformando ideias em vendas! 🚀
+
+
+
+## 🔒 Licença Proprietária
+
+© 2025 **Ademir de Oliveira / RedBlack** — Todos os direitos reservados.
+
+Este software e todo seu código-fonte, documentação e materiais relacionados são de propriedade exclusiva do autor.
+
+⚠️ **Uso restrito:**  
+Nenhuma parte deste software pode ser copiada, modificada, distribuída, exibida publicamente, publicada, sublicenciada ou vendida sem autorização expressa e por escrito.
+
+📛 **Violação:**  
+Qualquer uso não autorizado constitui violação dos direitos autorais e poderá resultar em medidas legais conforme a legislação vigente (Lei nº 9.610/98 - Direito Autoral do Brasil).
+
+✉️ **Contato para autorização:**  
+- Email: ademir1de1oliveira@gmail.com  
+- WhatsApp: [+55 51 99775-6708](https://wa.me/5551997756708)

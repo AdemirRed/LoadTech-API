@@ -25,14 +25,15 @@ const config = {
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   timezone: '-03:00', // Timezone do Brasil
   dialectOptions: {
-    ssl: process.env.NODE_ENV === 'production' ? {
-      require: true,
-      rejectUnauthorized: false
-    } : false,
-    useUTC: false,
-    dateStrings: true,
-    typeCast: true,
+  ssl: {
+    require: true,
+    rejectUnauthorized: false
   },
+  useUTC: false,
+  dateStrings: true,
+  typeCast: true,
+},
+
   migrationStorage: 'sequelize',
   migrationStorageTableName: 'sequelize_meta',
   migrationStorageTableSchema: 'loadtech',

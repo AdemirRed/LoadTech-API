@@ -5,7 +5,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import './database/index.js';
 import { connectRedis } from './config/redis.js';
-import { setupSwagger } from './config/swagger.js';
 import routes from './routes.js';
 import { cryptoMiddleware, decryptMiddleware } from './app/middlewares/cryptoMiddleware.js';
 
@@ -18,16 +17,14 @@ class App {
     this.initRedis();
     this.createUploadFolders();
     this.middleware();
-    this.setupSwagger();
+   
     this.routes();
   }
 
   /**
-   * Configura Swagger UI
+   * Configura  UI
    */
-  setupSwagger() {
-    setupSwagger(this.app);
-  }
+  
 
   /**
    * Inicializa conexão com Redis
@@ -86,7 +83,7 @@ class App {
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://localhost:3000',
-        'http://127.0.0.1:3000'
+        'https://loadtech.netlify.app'
       ];
       
       if (allowedOrigins.includes(origin)) {
