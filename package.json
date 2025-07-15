@@ -20,8 +20,7 @@
     "check-upload": "node scripts/check-upload-system.js",
     "test-upload": "node test-upload-basic.js",
     "test-frontend": "node serve-test-frontend.js",
-    "setup": "npm install && node scripts/check-upload-system.js",
-    "postinstall": "npm run migrate"
+    "setup": "npm install && node scripts/check-upload-system.js"
   },
   "author": {
     "name": "RedBlack",
@@ -46,6 +45,7 @@
     "pg-hstore": "^2.3.4",
     "redis": "^5.6.0",
     "sequelize": "^6.37.7",
+    "sequelize-cli": "^6.6.2",
     "sharp": "^0.34.3",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0",
@@ -62,7 +62,6 @@
     "nodemon": "^3.1.9",
     "playwright": "^1.54.1",
     "prettier": "^3.5.3",
-    "sequelize-cli": "^6.6.2",
     "sucrase": "^3.35.0"
   }
 }
