@@ -23,16 +23,16 @@ const config = {
     idle: 10000,
   },
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
-  timezone: '-03:00',
+  timezone: '-03:00', // Timezone do Brasil
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    },
-    useUTC: false,
-    dateStrings: true,
-    typeCast: true,
+  ssl: {
+    require: true,
+    rejectUnauthorized: false
   },
+  useUTC: false,
+  dateStrings: true,
+  typeCast: true,
+},
 
   migrationStorage: 'sequelize',
   migrationStorageTableName: 'sequelize_meta',
@@ -42,8 +42,4 @@ const config = {
   seederStorageTableSchema: 'loadtech',
 };
 
-export default {
-  development: config,
-  production: config,
-  test: config,
-};
+export default config;
