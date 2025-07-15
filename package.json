@@ -6,7 +6,13 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate": "sequelize db:migrate",
+    "migrate": "npx sequelize db:migrate",
+    "migrate:status": "npx sequelize db:migrate:status",
+    "migrate:check": "node scripts/check-migrations.js",
+    "migrate:undo": "npx sequelize db:migrate:undo",
+    "seed": "npx sequelize db:seed:all",
+    "build": "node scripts/deploy.js",
+    "deploy": "node scripts/deploy.js",
     "start": "node src/server.js",
     "dev": "nodemon",
     "lint": "eslint .",
@@ -14,7 +20,8 @@
     "check-upload": "node scripts/check-upload-system.js",
     "test-upload": "node test-upload-basic.js",
     "test-frontend": "node serve-test-frontend.js",
-    "setup": "npm install && node scripts/check-upload-system.js"
+    "setup": "npm install && node scripts/check-upload-system.js",
+    "postinstall": "npm run migrate"
   },
   "author": {
     "name": "RedBlack",
