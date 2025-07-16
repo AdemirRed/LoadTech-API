@@ -105,7 +105,7 @@ class App {
     // Middleware de descriptografia (ANTES do parsing JSON)
     this.app.use(decryptMiddleware({
       enabled: process.env.CRYPTO_ENABLED === 'true',
-      debug: process.env.NODE_ENV === 'development'
+      debug: process.env.CRYPTO_DEBUG === 'true'
     }));
 
     // Parsing JSON (DEPOIS da descriptografia)
@@ -123,7 +123,7 @@ class App {
     this.app.use(cryptoMiddleware({
       enabled: process.env.CRYPTO_ENABLED === 'true',
       excludePaths: ['/api/health', '/uploads', '/docs'],
-      debug: process.env.NODE_ENV === 'development'
+      debug: process.env.CRYPTO_DEBUG === 'true'
     }));
   }
 
