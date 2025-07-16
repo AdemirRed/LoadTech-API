@@ -246,7 +246,7 @@ routes.put('/loja', LojaController.update); // Atualizar loja
 routes.put('/loja/tema', LojaController.updateTheme);
 routes.put('/loja/seo', LojaController.updateSEO);
 routes.put('/loja/pagamentos', LojaController.updatePaymentSettings);
-routes.put('/loja/status', LojaController.toggleStatus);
+routes.put('/loja/status', LojaController.toggleStatus); 
 // #endregion
 
 // #region 🔐 Sync Asaas Autenticado - Via Token JWT
