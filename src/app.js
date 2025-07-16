@@ -102,15 +102,15 @@ class App {
       next();
     });
 
-    // Middleware de descriptografia (ANTES do parsing JSON)
+    // Parsing JSON (ANTES da descriptografia)
+    this.app.use(express.json());
+    this.app.use(express.urlencoded({ extended: true }));
+
+    // Middleware de descriptografia (DEPOIS do parsing JSON)
     this.app.use(decryptMiddleware({
       enabled: process.env.CRYPTO_ENABLED === 'true',
       debug: process.env.CRYPTO_DEBUG === 'true'
     }));
-
-    // Parsing JSON (DEPOIS da descriptografia)
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
 
     // Servir arquivos estáticos da pasta public
     this.app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));

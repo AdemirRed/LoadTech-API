@@ -124,12 +124,15 @@ function decryptMiddleware(options = {}) {
     }
 
     // Verificar se há dados criptografados no body
-    if (req.body && req.body.encrypted && req.body.payload) {
+    if (req.body && req.body.encrypted && (req.body.payload || req.body.data)) {
       try {
         const sessionId = getSessionId(req);
         
+        // Aceitar tanto 'payload' quanto 'data' para compatibilidade
+        const encryptedPayload = req.body.payload || req.body.data;
+        
         // Descriptografar dados
-        const decryptedData = cryptoUtils.decrypt(req.body.payload, sessionId);
+        const decryptedData = cryptoUtils.decrypt(encryptedPayload, sessionId);
         
         // Substituir body pelos dados descriptografados
         req.body = decryptedData;
@@ -137,7 +140,8 @@ function decryptMiddleware(options = {}) {
         if (debug) {
           console.log(`🔓 Dados descriptografados de ${req.path}:`, {
             sessionId: sessionId.substring(0, 8) + '...',
-            success: true
+            success: true,
+            originalFormat: req.body.payload ? 'payload' : 'data'
           });
         }
 

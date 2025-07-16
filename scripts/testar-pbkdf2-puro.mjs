@@ -113,7 +113,7 @@ async function testarLoginPBKDF2() {
     
     if (response.ok) {
       console.log('✅ Login PBKDF2 bem-sucedido!');
-      console.log('👤 Usuário:', result.user?.name);
+      console.log('👤 Usuário:', result.user?.nome);
       console.log('🎫 Token:', result.token ? 'Gerado' : 'Ausente');
       return { success: true, token: result.token, sessionId };
     } else {
@@ -142,7 +142,7 @@ async function testarEndpointProtegido(token, sessionId) {
     
     if (response.ok) {
       console.log('✅ Endpoint protegido acessível!');
-      console.log('👤 Dados do usuário:', result.user?.name);
+      console.log('👤 Dados do usuário:', result.nome);
       return true;
     } else {
       console.error('❌ Acesso negado:', result);
