@@ -15,6 +15,7 @@ import cryptoUtils from '../../utils/crypto.js';
 function cryptoMiddleware(options = {}) {
   const {
     enabled = process.env.CRYPTO_ENABLED === 'true',
+    force = process.env.CRYPTO_FORCE === 'true',
     excludePaths = ['/health', '/login', '/cadastro'],
     includePaths = null, // Se especificado, apenas estas rotas serão criptografadas
     debug = process.env.NODE_ENV === 'development'
@@ -52,19 +53,20 @@ function cryptoMiddleware(options = {}) {
 
     res.json = function(data) {
       try {
-        // Verificar se cliente aceita dados criptografados
-        const acceptsCrypto = req.headers['x-accept-crypto'] === 'true';
+        // Verificar se cliente aceita dados criptografados OU se criptografia é forçada
+        const acceptsCrypto = req.headers['x-accept-crypto'] === 'true' || force;
         
         if (debug) {
           console.log(`🔐 Headers recebidos para ${req.path}:`, {
             'x-accept-crypto': req.headers['x-accept-crypto'],
             acceptsCrypto,
-            allHeaders: Object.keys(req.headers)
+            force,
+            shouldEncrypt: acceptsCrypto
           });
         }
         
         if (!acceptsCrypto) {
-          // Cliente não suporta criptografia, enviar dados normais
+          // Cliente não suporta criptografia e não é forçada, enviar dados normais
           if (debug) console.log(`🔐 Cliente não aceita criptografia para ${req.path}`);
           return originalJson.call(this, data);
         }

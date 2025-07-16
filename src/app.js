@@ -122,6 +122,7 @@ class App {
     // Middleware de criptografia (depois do CORS, antes das rotas)
     this.app.use(cryptoMiddleware({
       enabled: process.env.CRYPTO_ENABLED === 'true',
+      force: process.env.CRYPTO_FORCE === 'true',
       excludePaths: ['/api/health', '/uploads', '/docs'],
       debug: process.env.CRYPTO_DEBUG === 'true'
     }));

@@ -86,7 +86,7 @@ async function testarLoginPBKDF2() {
   
   const sessionId = crypto.randomBytes(16).toString('hex');
   const loginData = {
-    email: 'ademir.santos@loadtech.com.br',
+    email: 'admin@loadtech.com.br',
     senha: 'LoadTech@2025!'
   };
 
