@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 
 export const up = async (queryInterface, Sequelize) => {
-  // Adicionar campos para controle de avisos de remoção
+  // Adicionar campos para controle de avisos de remoção 
   await queryInterface.addColumn('users', 'aviso_remocao_enviado', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
