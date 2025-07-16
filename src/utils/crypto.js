@@ -21,12 +21,7 @@ class CryptoUtils {
    * @returns {Buffer} Chave derivada
    */
   deriveKey(salt) {
-    // Modo compatibilidade: tentar ambos os métodos
-    if (process.env.CRYPTO_SIMPLE_MODE === 'true') {
-      // Método simples para compatibilidade com frontend
-      return crypto.createHash('sha256').update(this.MASTER_KEY).digest();
-    }
-    // Método seguro original
+    // Método seguro com PBKDF2 (100.000 iterações, salt único)
     return crypto.pbkdf2Sync(this.MASTER_KEY, salt, 100000, this.KEY_LENGTH, 'sha256');
   }
 
