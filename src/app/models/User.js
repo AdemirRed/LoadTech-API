@@ -194,6 +194,20 @@ class User extends Model {
         },
         // ===== FIM CAMPOS UPLOAD =====
         
+        // ===== CAMPOS DE CONTROLE DE REMOÇÃO =====
+        aviso_remocao_enviado: {
+          type: DataTypes.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+          comment: 'Indica se o aviso de remoção da conta foi enviado',
+        },
+        data_aviso_remocao: {
+          type: DataTypes.DATE,
+          allowNull: true,
+          comment: 'Data em que o aviso de remoção foi enviado',
+        },
+        // ===== FIM CAMPOS CONTROLE REMOÇÃO =====
+        
         senha: {
           type: DataTypes.VIRTUAL,
           set(valor) {
