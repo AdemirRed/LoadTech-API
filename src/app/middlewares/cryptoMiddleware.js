@@ -133,8 +133,8 @@ function decryptMiddleware(options = {}) {
         // Aceitar tanto 'payload' quanto 'data' para compatibilidade
         const encryptedPayload = req.body.payload || req.body.data;
         
-        // Descriptografar dados
-        const decryptedData = cryptoUtils.decrypt(encryptedPayload, sessionId);
+        // Usar função híbrida que aceita ambos os formatos
+        const decryptedData = cryptoUtils.decryptHybrid(encryptedPayload, sessionId);
         
         // Substituir body pelos dados descriptografados
         req.body = decryptedData;
@@ -143,7 +143,8 @@ function decryptMiddleware(options = {}) {
           console.log(`🔓 Dados descriptografados de ${req.path}:`, {
             sessionId: sessionId.substring(0, 8) + '...',
             success: true,
-            originalFormat: req.body.payload ? 'payload' : 'data'
+            originalFormat: req.body.payload ? 'payload' : 'data',
+            algorithm: encryptedPayload.algorithm || 'aes-256-gcm'
           });
         }
 

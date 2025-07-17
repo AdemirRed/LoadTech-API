@@ -118,6 +118,65 @@ class CryptoUtils {
   }
 
   /**
+   * Descriptografa dados no formato do frontend (AES-256-CBC com salt)
+   * @param {object} encryptedData - Dados do frontend
+   * @param {string} sessionId - ID da sessão (usado como base para salt)
+   * @returns {string|object} Dados descriptografados
+   */
+  decryptFrontendFormat(encryptedData) {
+    try {
+      const { data, iv, salt, tag, algorithm, iterations, keyLength } = encryptedData;
+      
+      // Verificar se é o formato do frontend
+      if (algorithm !== 'aes-256-cbc' || iterations !== 100000) {
+        throw new Error('Formato não suportado');
+      }
+      
+      // Derivar chave usando o salt do frontend
+      const key = crypto.pbkdf2Sync(this.MASTER_KEY, salt, iterations, keyLength / 8, 'sha256');
+      
+      // Descriptografar usando AES-256-CBC
+      const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
+      
+      let decrypted = decipher.update(data, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      // Tentar fazer parse como JSON
+      try {
+        return JSON.parse(decrypted);
+      } catch {
+        return decrypted;
+      }
+    } catch (error) {
+      throw new Error(`Erro na descriptografia frontend: ${error.message}`);
+    }
+  }
+
+  /**
+   * Função híbrida que aceita ambos os formatos
+   * @param {object} encryptedData - Dados criptografados
+   * @param {string} sessionId - ID da sessão
+   * @param {number} maxAge - Idade máxima em ms
+   * @returns {string|object} Dados descriptografados
+   */
+  decryptHybrid(encryptedData, sessionId = 'default', maxAge = 300000) {
+    try {
+      // Verificar se é formato do frontend (tem algorithm e salt)
+      if (encryptedData.algorithm && encryptedData.salt) {
+        console.log('🔓 Detectado formato frontend (AES-CBC)');
+        return this.decryptFrontendFormat(encryptedData);
+      }
+      
+      // Senão, usar formato backend (GCM)
+      console.log('🔓 Detectado formato backend (AES-GCM)');
+      return this.decrypt(encryptedData, sessionId, maxAge);
+      
+    } catch (error) {
+      throw new Error(`Erro na descriptografia híbrida: ${error.message}`);
+    }
+  }
+
+  /**
    * Gera assinatura HMAC para verificação de integridade
    * @param {Buffer} encrypted - Dados criptografados
    * @param {Buffer} iv - Vetor de inicialização
