@@ -117,44 +117,78 @@ function cryptoMiddleware(options = {}) {
 function decryptMiddleware(options = {}) {
   const {
     enabled = process.env.CRYPTO_ENABLED === 'true',
-    debug = process.env.NODE_ENV === 'development'
+    debug = process.env.CRYPTO_DEBUG === 'true'
   } = options;
 
   return (req, res, next) => {
     if (!enabled) {
+      if (debug) console.log('🔐 [DECRYPT] Middleware desabilitado');
       return next();
     }
 
     // Verificar se há dados criptografados no body
-    if (req.body && req.body.encrypted && (req.body.payload || req.body.data)) {
+    if (req.body && (req.body.encrypted || req.body.algorithm)) {
       try {
         const sessionId = getSessionId(req);
         
-        // Aceitar tanto 'payload' quanto 'data' para compatibilidade
-        const encryptedPayload = req.body.payload || req.body.data;
+        if (debug) {
+          console.log(`🔓 [DECRYPT] Processando ${req.path}:`, {
+            hasEncrypted: !!req.body.encrypted,
+            hasPayload: !!req.body.payload,
+            hasData: !!req.body.data,
+            hasAlgorithm: !!req.body.algorithm,
+            algorithm: req.body.algorithm || req.body.payload?.algorithm || req.body.data?.algorithm,
+            sessionId: sessionId.substring(0, 8) + '...'
+          });
+        }
         
-        // Usar função híbrida que aceita ambos os formatos
+        let encryptedPayload;
+        
+        // Determinar formato dos dados
+        if (req.body.encrypted && (req.body.payload || req.body.data)) {
+          // Formato padrão do backend: { encrypted: true, payload: {...} }
+          encryptedPayload = req.body.payload || req.body.data;
+          if (debug) console.log('🔓 [DECRYPT] Formato backend detectado');
+        } else if (req.body.algorithm) {
+          // Formato direto do frontend: { algorithm: "aes-256-cbc", data: "...", ... }
+          encryptedPayload = req.body;
+          if (debug) console.log('🔓 [DECRYPT] Formato frontend detectado');
+        } else {
+          if (debug) console.log('🔓 [DECRYPT] Formato não reconhecido, pulando');
+          return next();
+        }
+        
+        // Usar função híbrida para descriptografar
         const decryptedData = cryptoUtils.decryptHybrid(encryptedPayload, sessionId);
         
         // Substituir body pelos dados descriptografados
         req.body = decryptedData;
         
         if (debug) {
-          console.log(`🔓 Dados descriptografados de ${req.path}:`, {
-            sessionId: sessionId.substring(0, 8) + '...',
-            success: true,
-            originalFormat: req.body.payload ? 'payload' : 'data',
-            algorithm: encryptedPayload.algorithm || 'aes-256-gcm'
+          console.log(`✅ [DECRYPT] Sucesso em ${req.path}:`, {
+            algorithm: encryptedPayload.algorithm || 'aes-256-gcm',
+            decryptedType: typeof decryptedData,
+            decryptedKeys: typeof decryptedData === 'object' ? Object.keys(decryptedData) : 'N/A'
           });
         }
 
       } catch (error) {
-        console.error('Erro na descriptografia:', error);
+        console.error('❌ [DECRYPT] Erro na descriptografia:', {
+          path: req.path,
+          error: error.message,
+          algorithm: req.body.algorithm || req.body.payload?.algorithm || 'unknown',
+          hasPayload: !!req.body.payload,
+          hasData: !!req.body.data
+        });
+        
         return res.status(400).json({
           erro: 'Dados criptografados inválidos',
-          codigo: 'CRYPTO_ERROR'
+          codigo: 'CRYPTO_ERROR',
+          detalhes: debug ? error.message : 'Erro na descriptografia'
         });
       }
+    } else if (debug) {
+      console.log(`🔓 [DECRYPT] Sem dados criptografados em ${req.path}`);
     }
 
     next();

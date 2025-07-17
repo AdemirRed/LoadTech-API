@@ -127,27 +127,53 @@ class CryptoUtils {
     try {
       const { data, iv, salt, tag, algorithm, iterations, keyLength } = encryptedData;
       
+      console.log('🔓 [FRONTEND DECRYPT] Dados recebidos:', {
+        algorithm,
+        iterations,
+        keyLength,
+        dataLength: data?.length,
+        ivLength: iv?.length,
+        saltLength: salt?.length,
+        hasTag: !!tag
+      });
+      
       // Verificar se é o formato do frontend
       if (algorithm !== 'aes-256-cbc' || iterations !== 100000) {
-        throw new Error('Formato não suportado');
+        throw new Error(`Formato não suportado: ${algorithm}, ${iterations} iterações`);
       }
       
-      // Derivar chave usando o salt do frontend
-      const key = crypto.pbkdf2Sync(this.MASTER_KEY, salt, iterations, keyLength / 8, 'sha256');
+      // Derivar chave usando o salt do frontend (igual ao frontend)
+      const key = crypto.pbkdf2Sync(this.MASTER_KEY, Buffer.from(salt, 'hex'), iterations, keyLength / 8, 'sha256');
       
-      // Descriptografar usando AES-256-CBC
+      console.log('🔑 [FRONTEND DECRYPT] Chave derivada:', {
+        masterKeyLength: this.MASTER_KEY.length,
+        saltHex: salt,
+        keyHex: key.toString('hex').substring(0, 16) + '...'
+      });
+      
+      // AES-256-CBC não usa AuthTag (diferente do GCM)
+      // O 'tag' do frontend é provavelmente HMAC para verificação de integridade
       const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
       
       let decrypted = decipher.update(data, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       
+      console.log('✅ [FRONTEND DECRYPT] Descriptografia concluída:', {
+        decryptedLength: decrypted.length,
+        preview: decrypted.substring(0, 50) + '...'
+      });
+      
       // Tentar fazer parse como JSON
       try {
-        return JSON.parse(decrypted);
+        const parsed = JSON.parse(decrypted);
+        console.log('✅ [FRONTEND DECRYPT] JSON válido:', Object.keys(parsed));
+        return parsed;
       } catch {
+        console.log('⚠️  [FRONTEND DECRYPT] Não é JSON, retornando string');
         return decrypted;
       }
     } catch (error) {
+      console.error('❌ [FRONTEND DECRYPT] Erro:', error.message);
       throw new Error(`Erro na descriptografia frontend: ${error.message}`);
     }
   }
