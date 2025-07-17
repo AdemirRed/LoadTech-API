@@ -46,12 +46,12 @@ routes.post('/webhooks/mercadopago', PaymentController.mercadoPagoWebhook);
 
 // #region 🌐 Rotas Públicas - Autenticação e Cadastro
 // ===== ROTAS PÚBLICAS =====
-routes.post('/login', UserController.login);
-routes.post('/cadastro', UserController.store);
-routes.post('/verificar-email', UserController.verifyEmail);
-routes.post('/reenviar-codigo', UserController.resendVerificationCode);
-routes.post('/esqueci-senha', AuthController.forgotPassword);
-routes.post('/redefinir-senha', AuthController.resetPassword);
+routes.post('/login', decryptMiddleware(), UserController.login);
+routes.post('/cadastro', decryptMiddleware(), UserController.store);
+routes.post('/verificar-email', decryptMiddleware(), UserController.verifyEmail);
+routes.post('/reenviar-codigo', decryptMiddleware(), UserController.resendVerificationCode);
+routes.post('/esqueci-senha', decryptMiddleware(), AuthController.forgotPassword);
+routes.post('/redefinir-senha', decryptMiddleware(), AuthController.resetPassword);
 // #endregion
 
 // #region 💰 Planos Públicos - Consulta e Comparação
@@ -75,8 +75,8 @@ routes.get('/ir/:slug', PublicShopController.redirectToShop);
 routes.get('/loja/:slug', cacheMiddleware(300), LojaController.showBySlug);
 
 // Rotas Multi-Tenant (públicas por loja)
-routes.post('/loja/:slug/cliente/cadastro', lojaDbMiddleware, PublicShopController.cadastroCliente);
-routes.post('/loja/:slug/cliente/login', lojaDbMiddleware, PublicShopController.loginCliente);
+routes.post('/loja/:slug/cliente/cadastro', lojaDbMiddleware, decryptMiddleware(), PublicShopController.cadastroCliente);
+routes.post('/loja/:slug/cliente/login', lojaDbMiddleware, decryptMiddleware(), PublicShopController.loginCliente);
 // #endregion
 
 // #region 🔄 Sincronização Asaas - Público Pós Email Verificado
@@ -223,30 +223,30 @@ routes.use(authMiddleware);
 
 // Usuário
 routes.get('/usuario', UserController.show);
-routes.put('/usuario', UserController.update);
+routes.put('/usuario', decryptMiddleware(), UserController.update);
 // #endregion
 
 // #region 📄 Assinaturas - Gerenciamento de Planos
 // Assinaturas
 routes.get('/assinaturas', AssinaturaController.index);
 routes.get('/assinatura/atual', AssinaturaController.current);
-routes.post('/assinaturas', AssinaturaController.store);
-routes.post('/assinaturas/confirmar-asaas', AssinaturaController.confirmarAsaas); // Nova rota
-routes.put('/assinaturas/:id/cancelar', AssinaturaController.cancel);
-routes.put('/assinaturas/:id/alterar-plano', AssinaturaController.changePlan);
-routes.put('/assinaturas/:id/reativar', AssinaturaController.reactivate);
+routes.post('/assinaturas', decryptMiddleware(), AssinaturaController.store);
+routes.post('/assinaturas/confirmar-asaas', decryptMiddleware(), AssinaturaController.confirmarAsaas); // Nova rota
+routes.put('/assinaturas/:id/cancelar', decryptMiddleware(), AssinaturaController.cancel);
+routes.put('/assinaturas/:id/alterar-plano', decryptMiddleware(), AssinaturaController.changePlan);
+routes.put('/assinaturas/:id/reativar', decryptMiddleware(), AssinaturaController.reactivate);
 // #endregion
 
 // #region 🏬 Loja - Gerenciamento de Lojas do Usuário
 // Loja
 routes.get('/minha-loja', LojaController.show); // Minha loja principal
 routes.get('/minhas-lojas', LojaController.index); // Listar todas as lojas do usuário
-routes.post('/loja', LojaController.store); // Criar nova loja
-routes.put('/loja', LojaController.update); // Atualizar loja
-routes.put('/loja/tema', LojaController.updateTheme);
-routes.put('/loja/seo', LojaController.updateSEO);
-routes.put('/loja/pagamentos', LojaController.updatePaymentSettings);
-routes.put('/loja/status', LojaController.toggleStatus); 
+routes.post('/loja', decryptMiddleware(), LojaController.store); // Criar nova loja
+routes.put('/loja', decryptMiddleware(), LojaController.update); // Atualizar loja
+routes.put('/loja/tema', decryptMiddleware(), LojaController.updateTheme);
+routes.put('/loja/seo', decryptMiddleware(), LojaController.updateSEO);
+routes.put('/loja/pagamentos', decryptMiddleware(), LojaController.updatePaymentSettings);
+routes.put('/loja/status', decryptMiddleware(), LojaController.toggleStatus); 
 // #endregion
 
 // #region 🔐 Sync Asaas Autenticado - Via Token JWT
@@ -334,17 +334,17 @@ routes.post('/sync-asaas-auth', async (req, res) => {
 // ===== PAGAMENTOS =====
 
 // Asaas - Criar cliente
-routes.post('/payment/customer', PaymentController.createCustomer);
+routes.post('/payment/customer', decryptMiddleware(), PaymentController.createCustomer);
 
 // Asaas - Assinaturas por forma de pagamento
-routes.post('/payment/subscription/credit-card', PaymentController.createCreditCardSubscription);
-routes.post('/payment/subscription/boleto', PaymentController.createBoletoSubscription);
-routes.post('/payment/subscription/pix', PaymentController.createPixSubscription);
-routes.post('/payment/subscription/debit', PaymentController.createDebitSubscription);
-routes.post('/payment/subscription/transfer', PaymentController.createTransferSubscription);
+routes.post('/payment/subscription/credit-card', decryptMiddleware(), PaymentController.createCreditCardSubscription);
+routes.post('/payment/subscription/boleto', decryptMiddleware(), PaymentController.createBoletoSubscription);
+routes.post('/payment/subscription/pix', decryptMiddleware(), PaymentController.createPixSubscription);
+routes.post('/payment/subscription/debit', decryptMiddleware(), PaymentController.createDebitSubscription);
+routes.post('/payment/subscription/transfer', decryptMiddleware(), PaymentController.createTransferSubscription);
 
 // Asaas - Assinatura genérica (mantida para compatibilidade)
-routes.post('/payment/subscription', PaymentController.createSubscription);
+routes.post('/payment/subscription', decryptMiddleware(), PaymentController.createSubscription);
 routes.delete('/payment/subscription/:assinaturaId', PaymentController.cancelSubscription);
 routes.get('/payment/subscriptions', PaymentController.listUserSubscriptions);
 
@@ -370,7 +370,7 @@ routes.get('/payment/customers', PaymentController.listAsaasCustomers);
 routes.get('/payment/customers/:customerId', PaymentController.getAsaasCustomer);
 
 // Atualizar cliente no Asaas
-routes.put('/payment/customers/:customerId', PaymentController.updateAsaasCustomer);
+routes.put('/payment/customers/:customerId', decryptMiddleware(), PaymentController.updateAsaasCustomer);
 
 // Remover cliente do Asaas
 routes.delete('/payment/customers/:customerId', PaymentController.deleteAsaasCustomer);
@@ -473,19 +473,19 @@ routes.use(handleUploadError);
 routes.use(isAdminMiddleware);
 
 // Cache management
-routes.post('/admin/cache/clear', CacheController.clear);
+routes.post('/admin/cache/clear', decryptMiddleware(), CacheController.clear);
 routes.get('/admin/cache/:key', CacheController.get);
-routes.post('/admin/cache/:key', CacheController.set);
+routes.post('/admin/cache/:key', decryptMiddleware(), CacheController.set);
 routes.delete('/admin/cache/:key', CacheController.delete);
 
 // Gerenciamento de planos
-routes.post('/admin/planos', PlanoController.store);
-routes.put('/admin/planos/:id', PlanoController.update);
+routes.post('/admin/planos', decryptMiddleware(), PlanoController.store);
+routes.put('/admin/planos/:id', decryptMiddleware(), PlanoController.update);
 routes.delete('/admin/planos/:id', PlanoController.delete);
 
 // Sincronização com Asaas
-routes.post('/admin/sync/asaas-orphans', UserController.syncAsaasOrphans);
-routes.post('/admin/sync/asaas-customers', PaymentController.syncCustomersFromAsaas);
+routes.post('/admin/sync/asaas-orphans', decryptMiddleware(), UserController.syncAsaasOrphans);
+routes.post('/admin/sync/asaas-customers', decryptMiddleware(), PaymentController.syncCustomersFromAsaas);
 // #endregion
 
 // #region 🧪 Rotas de Teste - Desenvolvimento e Debug
