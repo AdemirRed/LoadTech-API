@@ -212,7 +212,7 @@ routes.get('/uploads/health', (req, res) => {
 // Cache stats (público para desenvolvimento)
 routes.get('/cache/stats', CacheController.stats);
 
-// Endpoint de teste para debug do login
+// 🧪 Endpoint de teste para debug do login (PÚBLICO)
 routes.post('/teste-login', async (req, res) => {
   try {
     console.log('🧪 [TESTE-LOGIN] Body recebido:', req.body);
