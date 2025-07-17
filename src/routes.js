@@ -262,6 +262,43 @@ routes.post('/teste-login', async (req, res) => {
     });
   }
 });
+
+// 🧪 Endpoint de teste para debug do cadastro (PÚBLICO)
+routes.post('/teste-cadastro', async (req, res) => {
+  try {
+    console.log('🧪 [TESTE-CADASTRO] Body recebido:', req.body);
+    console.log('🧪 [TESTE-CADASTRO] Headers:', req.headers);
+    
+    // Teste simples de validação
+    const { nome, email, senha } = req.body;
+    
+    if (!nome || !email || !senha) {
+      return res.status(400).json({ 
+        erro: 'Nome, email e senha são obrigatórios',
+        body: req.body 
+      });
+    }
+    
+    return res.json({
+      status: 'teste-cadastro-sucesso',
+      dadosRecebidos: {
+        nome,
+        email,
+        senhaLength: senha ? senha.length : 0,
+        outrosCampos: Object.keys(req.body).filter(k => !['nome', 'email', 'senha'].includes(k))
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('🧪 [TESTE-CADASTRO] Erro:', error);
+    return res.status(500).json({ 
+      erro: 'Erro interno no teste de cadastro',
+      message: error.message
+    });
+  }
+});
+
 // #endregion
 
 // #region 🔐 Middleware de Autenticação - Início das Rotas Protegidas
