@@ -211,6 +211,57 @@ routes.get('/uploads/health', (req, res) => {
 
 // Cache stats (público para desenvolvimento)
 routes.get('/cache/stats', CacheController.stats);
+
+// Endpoint de teste para debug do login
+routes.post('/teste-login', async (req, res) => {
+  try {
+    console.log('🧪 [TESTE-LOGIN] Body recebido:', req.body);
+    
+    // Teste simples de validação
+    const { email, senha } = req.body;
+    
+    if (!email || !senha) {
+      return res.status(400).json({ 
+        erro: 'Email e senha são obrigatórios',
+        body: req.body 
+      });
+    }
+    
+    // Teste de busca no banco
+    const user = await User.findOne({ where: { email } });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        erro: 'Usuário não encontrado',
+        email: email
+      });
+    }
+    
+    // Teste de senha
+    const senhaValida = user.checkPassword(senha);
+    
+    return res.json({
+      status: 'teste-sucesso',
+      usuario: {
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
+        email_verificado: user.email_verificado,
+        status: user.status
+      },
+      senhaValida,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('🧪 [TESTE-LOGIN] Erro:', error);
+    return res.status(500).json({ 
+      erro: 'Erro interno',
+      message: error.message,
+      stack: error.stack
+    });
+  }
+});
 // #endregion
 
 // #region 🔐 Middleware de Autenticação - Início das Rotas Protegidas
@@ -563,57 +614,6 @@ routes.get('/test-sync-asaas/:userId', async (req, res) => {
   } catch (error) {
     console.error('Erro no teste sync:', error);
     return res.status(500).json({ erro: error.message });
-  }
-});
-
-// Endpoint de teste para debug do login
-routes.post('/teste-login', async (req, res) => {
-  try {
-    console.log('🧪 [TESTE-LOGIN] Body recebido:', req.body);
-    
-    // Teste simples de validação
-    const { email, senha } = req.body;
-    
-    if (!email || !senha) {
-      return res.status(400).json({ 
-        erro: 'Email e senha são obrigatórios',
-        body: req.body 
-      });
-    }
-    
-    // Teste de busca no banco
-    const user = await User.findOne({ where: { email } });
-    
-    if (!user) {
-      return res.status(404).json({ 
-        erro: 'Usuário não encontrado',
-        email: email
-      });
-    }
-    
-    // Teste de senha
-    const senhaValida = user.checkPassword(senha);
-    
-    return res.json({
-      status: 'teste-sucesso',
-      usuario: {
-        id: user.id,
-        nome: user.nome,
-        email: user.email,
-        email_verificado: user.email_verificado,
-        status: user.status
-      },
-      senhaValida,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('🧪 [TESTE-LOGIN] Erro:', error);
-    return res.status(500).json({ 
-      erro: 'Erro interno',
-      message: error.message,
-      stack: error.stack
-    });
   }
 });
 // #endregion
