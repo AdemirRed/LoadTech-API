@@ -304,6 +304,14 @@ routes.post('/teste-cadastro', async (req, res) => {
 // #region 🔐 Middleware de Autenticação - Início das Rotas Protegidas
 // ===== MIDDLEWARE DE AUTENTICAÇÃO =====
 routes.use(authMiddleware);
+
+// ===== MIDDLEWARE DE CRIPTOGRAFIA PARA ROTAS PROTEGIDAS =====
+routes.use(cryptoMiddleware({
+  enabled: true,
+  force: true, // Forçar criptografia em rotas protegidas
+  excludePaths: ['/api/health', '/uploads', '/docs'], // Excluir apenas rotas técnicas
+  debug: process.env.NODE_ENV === 'development'
+}));
 // #endregion
 
 // #region 👤 Rotas Protegidas - Usuário

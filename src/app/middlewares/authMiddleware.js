@@ -3,6 +3,10 @@ import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 import authConfig from '../../config/auth.js';
 
+/**
+ * Middleware de autenticação sem criptografia automática
+ * A criptografia será feita pelo cryptoMiddleware aplicado nas rotas
+ */
 export default async (req, res, next) => {
   const authHeader = req.headers.authorization;
 

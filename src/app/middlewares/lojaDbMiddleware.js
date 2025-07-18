@@ -5,14 +5,19 @@ import 'dotenv/config';
 
 /**
  * Middleware multi-tenant: conecta ao banco da loja pelo slug
+ * A criptografia será feita pelo cryptoMiddleware aplicado nas rotas
  */
 export async function lojaDbMiddleware(req, res, next) {
   const slug = req.params.slug;
-  if (!slug) return res.status(400).json({ erro: 'Slug da loja não informado.' });
+  if (!slug) {
+    return res.status(400).json({ erro: 'Slug da loja não informado.' });
+  }
 
   // Busca loja pelo slug
   const loja = await Loja.findOne({ where: { slug } });
-  if (!loja) return res.status(404).json({ erro: 'Loja não encontrada.' });
+  if (!loja) {
+    return res.status(404).json({ erro: 'Loja não encontrada.' });
+  }
 
   // Monta nome do banco
   const dbName = `loja_${slug.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()}`;
